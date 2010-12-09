@@ -1,5 +1,9 @@
-include ../../../build.mak
-include ../../../build/common.mak
+# Adapt this path to your pjproject path
+
+export PJDIR := ~/devhome/pjproject-1.8.5
+
+include $(PJDIR)/build.mak
+include $(PJDIR)/build/common.mak
 
 export LIBDIR := ../../lib
 
@@ -12,9 +16,9 @@ export ZSRTP_LIB := ../../lib/libzsrtp-$(TARGET_NAME)$(LIBEXT)
 #
 export _CFLAGS 	:= $(CC_INC). $(CC_INC)../../zsrtp/include \
 		   $(CC_INC)../../zsrtp/include/crypto \
-		   $(CC_INC)../../../pjlib/include \
-		   $(CC_INC)../../../pjlib-util/include \
-		   $(CC_INC)../../../pjmedia/include \
+		   $(CC_INC)$(PJDIR)/pjlib/include \
+		   $(CC_INC)$(PJDIR)/pjlib-util/include \
+		   $(CC_INC)$(PJDIR)/pjmedia/include \
 		   $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CFLAGS) 
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
