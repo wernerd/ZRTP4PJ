@@ -1,4 +1,5 @@
 *.a
 *.o
 *.depend
+.kdev*
 build.mak
