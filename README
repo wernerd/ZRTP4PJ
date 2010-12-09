@@ -39,8 +39,11 @@ Unpack the tar file:
    cd ~/development/pjproject-1.8.5/third_party
    tar xvf ZSRTP4PJ.tar
 
-This unpacks all files into their correct places. Then change to the correct
-build directory and run make dep and make.
+This unpacks all files into their correct places. Before you can build the
+project you need to adjust a path setting in the Makefile. Change to the 
+correct build directory and open the Makefile file with your preferred text
+edito. Adjust the setting of the variable PJDIR to your environment. Store
+the makefile and run make dep and make.
 
    cd build/zsrtp
    make dep
