@@ -29,8 +29,6 @@
 
 #include <libzrtpcpp/ZrtpCWrapper.h>
 
-#define MAX_RTP_BUFFER_LEN  1024
-
 /**
  * @defgroup PJMEDIA_TRANSPORT_ZRTP ZRTP Transport Adapter
  * @ingroup PJMEDIA_TRANSPORT
@@ -168,7 +166,10 @@
  *
  */
 
-struct call;
+#define MAX_RTP_BUFFER_LEN  1024
+
+#define PJMEDIA_TRANSPORT_TYPE_ZRTP PJMEDIA_TRANSPORT_TYPE_USER+2
+
 PJ_BEGIN_DECL
 
 /**
@@ -186,6 +187,20 @@ typedef enum pjmedia_zrtp_use
     PJMEDIA_CREATE_ZRTP  = 2
     
 } pjmedia_zrtp_use;
+
+/**
+ * This structure specifies ZRTP transport specific info. This will fit
+ * into \a buffer field of pjmedia_transport_specific_info.
+ */
+typedef struct pjmedia_zrtp_info
+{
+    /**
+     * Specify whether the ZRTP transport is active for this session.
+     */
+    pj_bool_t           active;
+
+} pjmedia_zrtp_info;
+
 
 /**
  * Create the transport adapter, specifying the underlying transport to be

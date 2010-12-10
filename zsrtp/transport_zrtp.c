@@ -795,11 +795,21 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
                                       pjmedia_transport_info *info)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
-    PJ_ASSERT_RETURN(tp, PJ_EINVAL);
+    pjmedia_zrtp_info zrtp_info;
+    int spc_info_idx;
 
-    /* Since we don't have our own connection here, we just pass
-     * this function to the slave transport.
-     */
+    PJ_ASSERT_RETURN(tp && info, PJ_EINVAL);
+    PJ_ASSERT_RETURN(info->specific_info_cnt <
+            PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXCNT, PJ_ETOOMANY);
+             
+    zrtp_info.active = zrtp_inState(zrtp->zrtpCtx, SecureState) ? PJ_TRUE : PJ_FALSE;
+    
+    spc_info_idx = info->specific_info_cnt++;
+    info->spc_info[spc_info_idx].type = PJMEDIA_TRANSPORT_TYPE_ZRTP;
+
+    pj_memcpy(&info->spc_info[spc_info_idx].buffer, &zrtp_info, 
+              sizeof(zrtp_info));
+
     return pjmedia_transport_get_info(zrtp->slave_tp, info);
 }
 
