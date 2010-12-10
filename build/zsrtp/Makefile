@@ -73,6 +73,7 @@ export ZSRTP_OBJS = $(zrtpobj) $(cryptobj) $(srtpobj) $(srtpobj) $(transportobj)
 export ZSRTP_CFLAGS = $(_CFLAGS)
 export ZSRTP_CXXFLAGS = $(_CXXFLAGS)
 
+#path := `pwd`
 
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 ###############################################################################
@@ -95,7 +96,8 @@ distclean: realclean
 libzsrtp:
 	rm -f build.mak
 	$(MAKE) -f $(RULES_MAK) APP=ZSRTP app=libzsrtp $(ZSRTP_LIB)
-	echo 'export PJ_CFLAGS := $(PJ_CFLAGS) -I$(PJDIR)/third_party/zsrtp/include' >> build.mak
+	echo 'export PJ_CFLAGS := $(PJ_CFLAGS)' -I`pwd`/../../zsrtp/include >> build.mak
+	echo 'export PJ_LDFLAGS := $(PJ_LDFLAGS)' -L`pwd`/../../lib/ >> build.mak
 	echo  export PJ_LDLIBS := -lzsrtp-$(TARGET_NAME) $(PJ_LDLIBS) >> build.mak
 
 clean print_lib:
