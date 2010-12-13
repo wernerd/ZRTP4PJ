@@ -174,22 +174,6 @@ static zrtp_Callbacks c_callbacks =
     &zrtp_checkSASSignature
 };
 
-static void hexdump(const char* title, const unsigned char *s, int l)
-{
-    int n=0;
-
-    if (s == NULL) return;
-
-    fprintf(stderr, "%s",title);
-    for (; n < l ; ++n)
-    {
-        if ((n%16) == 0)
-            fprintf(stderr, "\n%04x",n);
-        fprintf(stderr, " %02x",s[n]);
-    }
-    fprintf(stderr, "\n");
-}
-
 static void timer_callback(pj_timer_heap_t *ht, pj_timer_entry *e);
 
 /**
@@ -375,6 +359,9 @@ PJ_DEF(pj_status_t) pjmedia_transport_zrtp_create(pjmedia_endpt *endpt,
         }
     }
 
+    /* Create the empty wrapper */
+    zrtp->zrtpCtx = zrtp_CreateWrapper();
+
     /* Initialize standard values */
     zrtp->clientIdString = clientId;    /* Set standard name */
     zrtp->zrtpSeq = 1;                  /* TODO: randomize */
@@ -393,14 +380,13 @@ PJ_DEF(pj_status_t) pjmedia_transport_zrtp_create(pjmedia_endpt *endpt,
 
 PJ_DECL(pj_status_t) pjmedia_transport_zrtp_initialize(pjmedia_transport *tp,
         const char *zidFilename,
-        pj_bool_t autoEnable,
-        void* config)
+        pj_bool_t autoEnable)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
 
-    zrtp->zrtpCtx = zrtp_CreateWrapper(&c_callbacks, zrtp->clientIdString,
-                                       config, zidFilename, zrtp);
+    zrtp_initializeZrtpEngine(zrtp->zrtpCtx, &c_callbacks, zrtp->clientIdString,
+                              zidFilename, zrtp);
     zrtp->enableZrtp = autoEnable;
     return PJ_SUCCESS;
 }

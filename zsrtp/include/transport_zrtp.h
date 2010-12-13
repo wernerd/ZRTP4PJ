@@ -237,6 +237,11 @@ PJ_DECL(pj_status_t) pjmedia_transport_zrtp_create( pjmedia_endpt *endpt,
  * information such as the applications ZID (ZRTP id) and its
  * retained shared secrets.
  *
+ * Before an application initializes the ZRTP it may use ZRTP functions
+ * to set specific configuration data. See the relevant documentation
+ * in @c ZrtpCWrapper.h . The application can peform this after
+ * it created transport_zrtp.
+ *
  * If one application requires several ZRTP sessions all
  * sessions use the same timeout thread and use the same ZID
  * file. Therefore an application does not need to do any
@@ -268,10 +273,6 @@ PJ_DECL(pj_status_t) pjmedia_transport_zrtp_create( pjmedia_endpt *endpt,
  *     if set to true the method automatically sets enableZrtp to
  *     true. This enables the ZRTP auto-sense mode.
  *
- * @param config
- *     this parameter points to ZRTP configuration data. If it is
- *     NULL then ZRTP transport uses a default setting.
- *
  * @return
  *     PJ_SUCCESS on success, ZRTP processing enabled, other codes
  *     leave ZRTP processing disabled.
@@ -279,8 +280,7 @@ PJ_DECL(pj_status_t) pjmedia_transport_zrtp_create( pjmedia_endpt *endpt,
  */
 PJ_DECL(pj_status_t) pjmedia_transport_zrtp_initialize(pjmedia_transport *tp,
         const char *zidFilename,
-        pj_bool_t autoEnable,
-        void* config);
+        pj_bool_t autoEnable);
 /**
  * Enable or disable ZRTP processing.
  *
@@ -407,8 +407,8 @@ PJ_DECL(void) pjmedia_transport_zrtp_setLocalSSRC(pjmedia_transport *tp, uint32_
  * Get the ZRTP context pointer.
  *
  * Appplications need the ZRTP context pointer if they call ZRTP specific
- * methods. The ZRTP specific include file @c ZrtpCWrapper contains the #
- * description of the ZRTP methods.
+ * methods. The ZRTP specific include file @c ZrtpCWrapper contains the
+ * descriptions of the ZRTP methods.
  *
  * @return Pointer to ZRTP context
  *
