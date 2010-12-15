@@ -21,6 +21,13 @@
 #ifndef CRYPTOCONTEXT_H
 #define CRYPTOCONTEXT_H
 
+/**
+ * @file CryptoContext.h
+ * @brief The C++ SRTP implementation
+ * @ingroup Z_SRTP
+ * @{
+ */
+
 #include <stdint.h>
 #include <crypto/AesSrtp.h>
 
@@ -386,6 +393,9 @@ private:
     AesSrtp* f8AesCipher;
 };
 
+/**
+ * @}
+ */
 #endif
 
 /** EMACS **
