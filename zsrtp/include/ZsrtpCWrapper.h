@@ -35,10 +35,15 @@
  */
 #define SrtpAuthenticationNull      0
 #define SrtpAuthenticationSha1Hmac  1
+#define SrtpAuthenticationSkeinHmac 2
+
 
 #define SrtpEncryptionNull    0
 #define SrtpEncryptionAESCM   1
 #define SrtpEncryptionAESF8   2
+#define SrtpEncryptionTWOCM   3
+#define SrtpEncryptionTWOF8   4
+
 
 #ifdef __cplusplus
 extern "C"
