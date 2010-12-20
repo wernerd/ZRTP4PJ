@@ -828,15 +828,25 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
         else
         {
             rc = zsrtp_unprotect(zrtp->srtpReceive, pkt, size, &newLen);
-            zrtp->unprotect++;
             if (rc == 1)
             {
+                zrtp->unprotect++;
                 zrtp->stream_rtp_cb(zrtp->stream_user_data, pkt,
                                     newLen);
                 zrtp->unprotect_err = 0;
             }
             else
             {
+                if (rc == -1) {
+                    zrtp->userCallback->zrtp_showMessage(zrtp->userCallback->userData,
+                                                         zrtp_Warning, 
+                                                         zrtp_WarningSRTPauthError);
+                }
+                else {
+                    zrtp->userCallback->zrtp_showMessage(zrtp->userCallback->userData,
+                                                         zrtp_Warning,
+                                                         zrtp_WarningSRTPreplayError);
+                }
                 zrtp->unprotect_err = rc;
             }
         }

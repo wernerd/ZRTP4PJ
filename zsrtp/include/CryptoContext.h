@@ -391,6 +391,8 @@ private:
     uint8_t tagLength;
     bool  seqNumSet;
 
+    void*   macCtx;
+    
     AesSrtp* aesCipher;
     AesSrtp* f8AesCipher;
 };

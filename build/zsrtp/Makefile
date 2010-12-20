@@ -1,6 +1,6 @@
 # Adapt this path to your pjproject path
 
-export PJDIR := ~/devhome/pjproject-1.8.5
+export PJDIR := ~/devhome/pjproject.git
 
 include $(PJDIR)/build.mak
 include $(PJDIR)/build/common.mak
@@ -97,7 +97,7 @@ libzsrtp:
 	rm -f build.mak
 	$(MAKE) -f $(RULES_MAK) APP=ZSRTP app=libzsrtp $(ZSRTP_LIB)
 	echo 'export PJ_CFLAGS := $(PJ_CFLAGS)' -I`pwd`/../../zsrtp/include >> build.mak
-	echo 'export PJ_LDFLAGS := $(PJ_LDFLAGS)' -L`pwd`/../../lib/ >> build.mak
+	echo 'export PJ_LDFLAGS := $(PJ_LDFLAGS)' -L`pwd`/../../lib >> build.mak
 	echo  export PJ_LDLIBS := -lzsrtp-$(TARGET_NAME) $(PJ_LDLIBS) >> build.mak
 
 clean print_lib:
