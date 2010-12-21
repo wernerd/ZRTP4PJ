@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2005, 2004 Erik Eliasson, Johan Bilien
+  Copyright (C) 2005, 2004, 2010 Erik Eliasson, Johan Bilien, Werner Dittmann
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public

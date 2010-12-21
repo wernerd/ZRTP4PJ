@@ -25,9 +25,11 @@
 
 #include <string.h>
 #include <arpa/inet.h>
+#include <stdio.h>
 
 #include <CryptoContext.h>
 #include <crypto/hmac.h>
+#include <crypto/hmacSkein.h>
 
 
 CryptoContext::CryptoContext( uint32_t ssrc,
@@ -143,6 +145,7 @@ CryptoContext::~CryptoContext() {
             break;
 
         case SrtpAuthenticationSkeinHmac:
+            freeSkeinMacContext(macCtx);
             break;
         }
     }
@@ -234,6 +237,12 @@ void CryptoContext::srtpAuthenticate(uint8_t* pkt, uint32_t pktlen, uint32_t roc
         memcpy(tag, temp, getTagLength());
         break;
     case SrtpAuthenticationSkeinHmac:
+        macSkeinCtx(macCtx,
+                    chunks,           // data chunks to hash
+                    chunkLength,      // length of the data to hash
+                    temp);
+        /* truncate the result */
+        memcpy(tag, temp, getTagLength());
         break;
     }
 }
@@ -297,6 +306,8 @@ void CryptoContext::deriveSrtpKeys(uint64_t index)
         macCtx = createSha1HmacContext(k_a, n_a);
         break;
     case SrtpAuthenticationSkeinHmac:
+        // Skein MAC uses number of bits as MAC size, not just bytes
+        macCtx = createSkeinMacContext(k_a, n_a, tagLength*8, Skein512);
         break;
     }
     // compute the session salt

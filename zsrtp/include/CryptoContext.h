@@ -383,12 +383,12 @@ private:
     int32_t  n_s;
     uint8_t* k_s;
 
-    uint8_t ealg;
-    uint8_t aalg;
-    uint8_t ekeyl;
-    uint8_t akeyl;
-    uint8_t skeyl;
-    uint8_t tagLength;
+    int32_t ealg;
+    int32_t aalg;
+    int32_t ekeyl;
+    int32_t akeyl;
+    int32_t skeyl;
+    int32_t tagLength;
     bool  seqNumSet;
 
     void*   macCtx;
