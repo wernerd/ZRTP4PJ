@@ -32,8 +32,9 @@ ciphersossl = crypto/openssl/AesSrtp.o crypto/openssl/hmac.o \
     crypto/openssl/sha256.o \
     crypto/openssl/hmac384.o \
     crypto/openssl/sha384.o \
-    crypto/openssl/AesCFB.o 
+    crypto/openssl/AesCFB.o
 
+skeinmac = crypto/skein.o crypto/skein_block.o crypto/SkeinMACApi.o
 
 # Gcrypt support currently not tested
 #ciphersgcrypt = crypto/gcrypt/gcryptAesSrtp.o crypto/gcrypt/gcrypthmac.o \
@@ -66,10 +67,10 @@ srtpobj = srtp/ZsrtpCWrapper.o srtp/CryptoContext.o
 
 transportobj = transport_zrtp.o
 
-cryptobj =  $(ciphersossl)
+cryptobj =  $(ciphersossl) $(skeinmac)
 
 export ZSRTP_SRCDIR = ../../zsrtp
-export ZSRTP_OBJS = $(zrtpobj) $(cryptobj) $(srtpobj) $(srtpobj) $(transportobj)
+export ZSRTP_OBJS = $(zrtpobj) $(cryptobj) $(srtpobj) $(transportobj)
 export ZSRTP_CFLAGS = $(_CFLAGS)
 export ZSRTP_CXXFLAGS = $(_CXXFLAGS)
 
