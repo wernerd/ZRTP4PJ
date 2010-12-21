@@ -21,7 +21,7 @@
 
 #include <crypto/SkeinMACApi.h>
 /**
- * @file hmacSkein.h
+ * @file macSkein.h
  * @brief Function that provide Skein MAC support
  * 
  *

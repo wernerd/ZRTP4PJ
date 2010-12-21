@@ -29,7 +29,7 @@
 
 #include <CryptoContext.h>
 #include <crypto/hmac.h>
-#include <crypto/hmacSkein.h>
+#include <crypto/macSkein.h>
 
 
 CryptoContext::CryptoContext( uint32_t ssrc,
