@@ -37,7 +37,7 @@ extern "C"
      * structures as well.
      */
     typedef struct SkeinMacCtx {
-        SkeinSize_t skeinSize;
+        u64b_t skeinSize;
         u64b_t  XSave[SKEIN1024_STATE_WORDS];   /* saved chaining variables, max number */
         union {
             Skein_Ctxt_Hdr_t h;
