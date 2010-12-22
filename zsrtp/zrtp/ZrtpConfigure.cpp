@@ -179,7 +179,6 @@ void ZrtpConfigure::setStandardConfig() {
 
     addAlgo(SasType, zrtpSasTypes.getByName(b32));
 
-    
     addAlgo(AuthLength, zrtpAuthLengths.getByName(sk32));
     addAlgo(AuthLength, zrtpAuthLengths.getByName(sk64));
     addAlgo(AuthLength, zrtpAuthLengths.getByName(hs32));
