@@ -34,7 +34,7 @@ ciphersossl = crypto/openssl/AesSrtp.o crypto/openssl/hmac.o \
     crypto/openssl/sha384.o \
     crypto/openssl/AesCFB.o
 
-skeinmac = crypto/skein.o crypto/skein_block.o crypto/SkeinMACApi.o \
+skeinmac = crypto/skein.o crypto/skein_block.o crypto/skeinApi.o \
     crypto/macSkein.o
 
 # Gcrypt support currently not tested

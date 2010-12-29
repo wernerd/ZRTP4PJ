@@ -22,38 +22,38 @@ void macSkein(uint8_t* key, int32_t key_length,
                const uint8_t* data, uint32_t data_length,
                uint8_t* mac, int32_t mac_length, SkeinSize_t skeinSize)
 {
-    SkeinMacCtx_t ctx;
+    SkeinCtx_t ctx;
     
-    skeinMacCtxPrepare(&ctx, skeinSize);
+    skeinCtxPrepare(&ctx, skeinSize);
     
     skeinMacInit(&ctx, key, key_length, mac_length);
-    skeinMacUpdate(&ctx, data, data_length);
-    skeinMacFinal(&ctx, mac);
+    skeinUpdate(&ctx, data, data_length);
+    skeinFinal(&ctx, mac);
 }
 
 void macSkein(uint8_t* key, int32_t key_length,
                const uint8_t* data[], uint32_t data_length[],
                uint8_t* mac, int32_t mac_length, SkeinSize_t skeinSize)
 {
-    SkeinMacCtx_t ctx;
+    SkeinCtx_t ctx;
     
-    skeinMacCtxPrepare(&ctx, skeinSize);
+    skeinCtxPrepare(&ctx, skeinSize);
 
     skeinMacInit(&ctx, key, key_length, mac_length);
     while (*data) {
-        skeinMacUpdate(&ctx, *data, *data_length);
+        skeinUpdate(&ctx, *data, *data_length);
         data++;
         data_length ++;
     }
-    skeinMacFinal(&ctx, mac);
+    skeinFinal(&ctx, mac);
 }
 
 void* createSkeinMacContext(uint8_t* key, int32_t key_length, 
                             int32_t mac_length, SkeinSize_t skeinSize)
 {
-    SkeinMacCtx_t* ctx = (SkeinMacCtx_t*)malloc(sizeof(SkeinMacCtx_t));
+    SkeinCtx_t* ctx = (SkeinCtx_t*)malloc(sizeof(SkeinCtx_t));
 
-    skeinMacCtxPrepare(ctx, skeinSize);
+    skeinCtxPrepare(ctx, skeinSize);
     skeinMacInit(ctx, key, key_length, mac_length);
     return ctx;
 }
@@ -61,25 +61,25 @@ void* createSkeinMacContext(uint8_t* key, int32_t key_length,
 void macSkeinCtx(void* ctx, const uint8_t* data, uint32_t data_length,
                 uint8_t* mac)
 {
-    SkeinMacCtx_t* pctx = (SkeinMacCtx_t*)ctx;
+    SkeinCtx_t* pctx = (SkeinCtx_t*)ctx;
     
-    skeinMacInit(pctx, NULL, 0, 0);
-    skeinMacUpdate(pctx, data, data_length);
-    skeinMacFinal(pctx, mac);
+    skeinUpdate(pctx, data, data_length);
+    skeinFinal(pctx, mac);
+    skeinReset(pctx);
 }
 
 void macSkeinCtx(void* ctx, const uint8_t* data[], uint32_t data_length[],
                 uint8_t* mac)
 {
-    SkeinMacCtx_t* pctx = (SkeinMacCtx_t*)ctx;
+    SkeinCtx_t* pctx = (SkeinCtx_t*)ctx;
     
-    skeinMacInit(pctx, NULL, 0, 0);
     while (*data) {
-        skeinMacUpdate(pctx, *data, *data_length);
+        skeinUpdate(pctx, *data, *data_length);
         data++;
         data_length++;
     }
-    skeinMacFinal(pctx, mac);
+    skeinFinal(pctx, mac);
+    skeinReset(pctx);
 }
 
 void freeSkeinMacContext(void* ctx)
