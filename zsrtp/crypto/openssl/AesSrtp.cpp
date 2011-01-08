@@ -45,11 +45,12 @@ extern void initializeOpenSSL();
 #include <stdio.h>
 #include <arpa/inet.h>
 
-AesSrtp::AesSrtp():key(NULL) {
+AesSrtp::AesSrtp(int algo):key(NULL), algorithm(algo) {
     void initializeOpenSSL();
 }
 
-AesSrtp::AesSrtp( uint8_t* k, int32_t keyLength ):key(NULL) {
+AesSrtp::AesSrtp( uint8_t* k, int32_t keyLength, int algo):
+    key(NULL), algorithm(algo) {
 
     void initializeOpenSSL();
     setNewKey(k, keyLength);
@@ -84,28 +85,28 @@ void AesSrtp::get_ctr_cipher_stream( uint8_t* output, uint32_t length,
     uint16_t ctr;
     uint16_t input;
 
-    unsigned char aes_input[AES_BLOCK_SIZE];
-    unsigned char temp[AES_BLOCK_SIZE];
+    unsigned char aes_input[SRTP_BLOCK_SIZE];
+    unsigned char temp[SRTP_BLOCK_SIZE];
 
     memcpy(aes_input, iv, 14 );
     iv += 14;
 
-    for ( ctr = 0; ctr < length/AES_BLOCK_SIZE; ctr++ ) {
+    for ( ctr = 0; ctr < length/SRTP_BLOCK_SIZE; ctr++ ) {
         input = ctr;
         //compute the cipher stream
         aes_input[14] = (uint8_t)((input & 0xFF00) >>  8);
         aes_input[15] = (uint8_t)((input & 0x00FF));
 
-        AES_encrypt(aes_input, &output[ctr*AES_BLOCK_SIZE], (AES_KEY *)key );
+        AES_encrypt(aes_input, &output[ctr*SRTP_BLOCK_SIZE], (AES_KEY *)key );
     }
-    if ((length % AES_BLOCK_SIZE) > 0) {
+    if ((length % SRTP_BLOCK_SIZE) > 0) {
         // Treat the last bytes:
         input = ctr;
         aes_input[14] = (uint8_t)((input & 0xFF00) >>  8);
         aes_input[15] = (uint8_t)((input & 0x00FF));
 
         AES_encrypt(aes_input, temp, (AES_KEY *)key );
-        memcpy( &output[ctr*AES_BLOCK_SIZE], temp, length % AES_BLOCK_SIZE );
+        memcpy( &output[ctr*SRTP_BLOCK_SIZE], temp, length % SRTP_BLOCK_SIZE );
     }
 }
 
@@ -149,7 +150,7 @@ void AesSrtp::f8_encrypt(const uint8_t* data, uint32_t data_length,
     f8_encrypt(data, data_length, const_cast<uint8_t*>(data), iv, origKey, keyLen, salt, saltLen, f8Cipher);
 }
 
-#define MAX_AES_KEYLEN 32
+#define MAX_KEYLEN 32
 
 void AesSrtp::f8_encrypt(const uint8_t* in, uint32_t in_length, uint8_t* out,
                          uint8_t* iv, uint8_t* origKey, int32_t keyLen,
@@ -160,17 +161,17 @@ void AesSrtp::f8_encrypt(const uint8_t* in, uint32_t in_length, uint8_t* out,
     int i;
     int offset = 0;
 
-    unsigned char ivAccent[AES_BLOCK_SIZE];
-    unsigned char maskedKey[MAX_AES_KEYLEN];
-    unsigned char saltMask[MAX_AES_KEYLEN];
-    unsigned char S[AES_BLOCK_SIZE];
+    unsigned char ivAccent[SRTP_BLOCK_SIZE];
+    unsigned char maskedKey[MAX_KEYLEN];
+    unsigned char saltMask[MAX_KEYLEN];
+    unsigned char S[SRTP_BLOCK_SIZE];
 
     F8_CIPHER_CTX f8ctx;
 
     if (key == NULL)
         return;
 
-    if (keyLen > MAX_AES_KEYLEN)
+    if (keyLen > MAX_KEYLEN)
         return;
 
     if (saltLen > keyLen)
@@ -213,12 +214,12 @@ void AesSrtp::f8_encrypt(const uint8_t* in, uint32_t in_length, uint8_t* out,
     f8ctx.J = 0;                       // initialize the counter
     f8ctx.S = S;               // get the key stream buffer
 
-    memset(f8ctx.S, 0, AES_BLOCK_SIZE); // initial value for key stream
+    memset(f8ctx.S, 0, SRTP_BLOCK_SIZE); // initial value for key stream
 
-    while (in_length >= AES_BLOCK_SIZE) {
-        processBlock(&f8ctx, in+offset, AES_BLOCK_SIZE, out+offset);
-        in_length -= AES_BLOCK_SIZE;
-        offset += AES_BLOCK_SIZE;
+    while (in_length >= SRTP_BLOCK_SIZE) {
+        processBlock(&f8ctx, in+offset, SRTP_BLOCK_SIZE, out+offset);
+        in_length -= SRTP_BLOCK_SIZE;
+        offset += SRTP_BLOCK_SIZE;
     }
     if (in_length > 0) {
         processBlock(&f8ctx, in+offset, in_length, out+offset);
@@ -238,7 +239,7 @@ int AesSrtp::processBlock(F8_CIPHER_CTX *f8ctx, const uint8_t* in, int32_t lengt
      */
     cp_in = f8ctx->ivAccent;
     cp_out = f8ctx->S;
-    for (i = 0; i < AES_BLOCK_SIZE; i++) {
+    for (i = 0; i < SRTP_BLOCK_SIZE; i++) {
         *cp_out++ ^= *cp_in++;
     }
     /*

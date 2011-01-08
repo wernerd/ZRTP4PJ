@@ -29,7 +29,6 @@
  */
 
 #include <stdint.h>
-#include <crypto/AesSrtp.h>
 
 #define REPLAY_WINDOW_SIZE 64
 
@@ -42,6 +41,10 @@ const int SrtpEncryptionAESCM = 1;
 const int SrtpEncryptionAESF8 = 2;
 const int SrtpEncryptionTWOCM = 3;
 const int SrtpEncryptionTWOF8 = 4;
+
+#include <crypto/AesSrtp.h>
+
+class AesSrtp;
 
 /**
  * The implementation for a SRTP cryptographic context.
@@ -393,8 +396,8 @@ private:
 
     void*   macCtx;
     
-    AesSrtp* aesCipher;
-    AesSrtp* f8AesCipher;
+    AesSrtp* cipher;
+    AesSrtp* f8Cipher;
 };
 
 /**

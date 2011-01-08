@@ -50,7 +50,7 @@ CryptoContext::CryptoContext( uint32_t ssrc,
         roc(roc),guessed_roc(0),s_l(0),key_deriv_rate(key_deriv_rate),
         replay_window(0),
         master_key_srtp_use_nb(0), master_key_srtcp_use_nb(0), seqNumSet(false),
-        aesCipher(NULL), f8AesCipher(NULL)
+        cipher(NULL), f8Cipher(NULL)
 {
     this->ealg = ealg;
     this->aalg = aalg;
@@ -73,16 +73,27 @@ CryptoContext::CryptoContext( uint32_t ssrc,
         n_s = 0;
         k_s = NULL;
         break;
+        
+    case SrtpEncryptionTWOF8:
+        f8Cipher = new AesSrtp(SrtpEncryptionTWOCM);
+
+    case SrtpEncryptionTWOCM:
+        n_e = ekeyl;
+        k_e = new uint8_t[n_e];
+        n_s = skeyl;
+        k_s = new uint8_t[n_s];
+        cipher = new AesSrtp(SrtpEncryptionTWOCM);
+        break;
 
     case SrtpEncryptionAESF8:
-        f8AesCipher = new AesSrtp();
+        f8Cipher = new AesSrtp();
 
     case SrtpEncryptionAESCM:
         n_e = ekeyl;
         k_e = new uint8_t[n_e];
         n_s = skeyl;
         k_s = new uint8_t[n_s];
-        aesCipher = new AesSrtp();
+        cipher = new AesSrtp();
         break;
     }
 
@@ -130,13 +141,13 @@ CryptoContext::~CryptoContext() {
         n_a = 0;
         delete [] k_a;
     }
-    if (aesCipher != NULL) {
-        delete aesCipher;
-        aesCipher = NULL;
+    if (cipher != NULL) {
+        delete cipher;
+        cipher = NULL;
     }
-    if (f8AesCipher != NULL) {
-        delete f8AesCipher;
-        f8AesCipher = NULL;
+    if (f8Cipher != NULL) {
+        delete f8Cipher;
+        f8Cipher = NULL;
     }
     if (macCtx != NULL) {
         switch(aalg) {
@@ -179,7 +190,7 @@ void CryptoContext::srtpEncrypt(uint8_t* pkt, uint8_t* payload, uint32_t paylen,
         }
         iv[14] = iv[15] = 0;
 
-        aesCipher->ctr_encrypt(payload, paylen, iv);
+        cipher->ctr_encrypt(payload, paylen, iv);
     }
 
     if (ealg == SrtpEncryptionAESF8) {
@@ -201,8 +212,8 @@ void CryptoContext::srtpEncrypt(uint8_t* pkt, uint8_t* payload, uint32_t paylen,
         // set ROC in network order into IV
         ui32p[3] = htonl(roc);
 
-        aesCipher->f8_encrypt(payload, paylen,
-                              iv, k_e, n_e, k_s, n_s, f8AesCipher);
+        cipher->f8_encrypt(payload, paylen,
+                              iv, k_e, n_e, k_s, n_s, f8Cipher);
     }
 }
 
@@ -289,17 +300,17 @@ void CryptoContext::deriveSrtpKeys(uint64_t index)
     uint8_t iv[16];
 
     // prepare AES cipher to compute derived keys.
-    aesCipher->setNewKey(master_key, master_key_length);
+    cipher->setNewKey(master_key, master_key_length);
 
     // compute the session encryption key
     uint64_t label = 0;
     computeIv(iv, label, index, key_deriv_rate, master_salt);
-    aesCipher->get_ctr_cipher_stream(k_e, n_e, iv);
+    cipher->get_ctr_cipher_stream(k_e, n_e, iv);
 
     // compute the session authentication key
     label = 0x01;
     computeIv(iv, label, index, key_deriv_rate, master_salt);
-    aesCipher->get_ctr_cipher_stream(k_a, n_a, iv);
+    cipher->get_ctr_cipher_stream(k_a, n_a, iv);
     // Initialize MAC context with the derived key
     switch (aalg) {
     case SrtpAuthenticationSha1Hmac:
@@ -313,10 +324,10 @@ void CryptoContext::deriveSrtpKeys(uint64_t index)
     // compute the session salt
     label = 0x02;
     computeIv(iv, label, index, key_deriv_rate, master_salt);
-    aesCipher->get_ctr_cipher_stream(k_s, n_s, iv);
+    cipher->get_ctr_cipher_stream(k_s, n_s, iv);
 
     // as last step prepare AES cipher with derived key.
-    aesCipher->setNewKey(k_e, n_e);
+    cipher->setNewKey(k_e, n_e);
 }
 
 /* Based on the algorithm provided in Appendix A - draft-ietf-srtp-05.txt */
