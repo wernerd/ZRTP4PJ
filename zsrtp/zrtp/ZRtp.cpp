@@ -286,7 +286,7 @@ ZrtpPacketCommit* ZRtp::prepareCommit(ZrtpPacketHello *hello, uint32_t* errMsg) 
     dhContext = new ZrtpDH(pubKey->getName());
     dhContext->generatePublicKey();
 
-    pubKeyLen = dhContext->getPubKeySize();
+//    pubKeyLen = dhContext->getPubKeySize();
     dhContext->getPubKeyBytes(pubKeyBytes);
     sendInfo(Info, InfoCommitDHGenerated);
 
@@ -503,7 +503,7 @@ ZrtpPacketDHPart* ZRtp::prepareDHPart1(ZrtpPacketCommit *commit, uint32_t* errMs
         dhContext = new ZrtpDH(pubKey->getName());
         dhContext->generatePublicKey();
     }
-    pubKeyLen = dhContext->getPubKeySize();
+    // pubKeyLen = dhContext->getPubKeySize();
 
     sendInfo(Info, InfoDH1DHGenerated);
 
@@ -605,6 +605,7 @@ ZrtpPacketDHPart* ZRtp::prepareDHPart2(ZrtpPacketDHPart *dhPart1, uint32_t* errM
         return NULL;
     }
     dhContext->computeSecretKey(pvr, DHss);
+
     myRole = Initiator;
 
     // We are Initiator: the Responder's Hello and the Initiator's (our) Commit
@@ -677,7 +678,6 @@ ZrtpPacketConfirm* ZRtp::prepareConfirm1(ZrtpPacketDHPart* dhPart2, uint32_t* er
         return NULL;
     }
     dhContext->computeSecretKey(pvi, DHss);
-
     // Now we have the peer's pvi. Because we are responder re-compute my hvi
     // using my Hello packet and the Initiator's DHPart2 and compare with
     // hvi sent in commit packet. If it doesn't macht then a MitM attack

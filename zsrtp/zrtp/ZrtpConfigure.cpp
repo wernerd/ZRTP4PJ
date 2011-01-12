@@ -123,6 +123,8 @@ PubKeyEnum::PubKeyEnum() : EnumBase(PubKeyAlgorithm) {
     insert(dh2k);
     insert(dh3k);
     insert(mult);
+    insert(ec25);
+    insert(ec38);
 }
 
 PubKeyEnum::~PubKeyEnum() {}
@@ -173,8 +175,10 @@ void ZrtpConfigure::setStandardConfig() {
     addAlgo(CipherAlgorithm, zrtpSymCiphers.getByName(aes3));
     addAlgo(CipherAlgorithm, zrtpSymCiphers.getByName(aes1));
 
-    addAlgo(PubKeyAlgorithm, zrtpPubKeys.getByName(dh3k));
+    addAlgo(PubKeyAlgorithm, zrtpPubKeys.getByName(ec25));
+    addAlgo(PubKeyAlgorithm, zrtpPubKeys.getByName(ec38));
     addAlgo(PubKeyAlgorithm, zrtpPubKeys.getByName(dh2k));
+    addAlgo(PubKeyAlgorithm, zrtpPubKeys.getByName(dh3k));
     addAlgo(PubKeyAlgorithm, zrtpPubKeys.getByName(mult));
 
     addAlgo(SasType, zrtpSasTypes.getByName(b32));

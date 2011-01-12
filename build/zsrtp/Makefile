@@ -20,7 +20,7 @@ export _CFLAGS 	:= $(CC_INC). $(CC_INC)../../zsrtp/include \
 		   $(CC_INC)$(PJDIR)/pjlib-util/include \
 		   $(CC_INC)$(PJDIR)/pjmedia/include \
 		   $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
-		   $(CFLAGS) 
+		   $(CFLAGS)  -fno-strict-aliasing
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
 export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
