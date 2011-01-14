@@ -46,13 +46,11 @@ extern void initializeOpenSSL();
 #include <arpa/inet.h>
 
 AesSrtp::AesSrtp(int algo):key(NULL), algorithm(algo) {
-    void initializeOpenSSL();
 }
 
 AesSrtp::AesSrtp( uint8_t* k, int32_t keyLength, int algo):
     key(NULL), algorithm(algo) {
 
-    void initializeOpenSSL();
     setNewKey(k, keyLength);
 }
 

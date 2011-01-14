@@ -277,6 +277,7 @@ int32_t ZrtpDH::computeSecretKey(uint8_t *pubKeyBytes, uint8_t *secret) {
     }
     if (pkType == EC25 || pkType == EC38) {
         uint8_t buffer[100];
+        int32_t ret;
         int32_t len = getPubKeySize();
 
         buffer[0] = POINT_CONVERSION_UNCOMPRESSED;
@@ -285,7 +286,9 @@ int32_t ZrtpDH::computeSecretKey(uint8_t *pubKeyBytes, uint8_t *secret) {
         EC_POINT* point = EC_POINT_new(EC_KEY_get0_group(static_cast<EC_KEY*>(ctx)));
         EC_POINT_oct2point(EC_KEY_get0_group(static_cast<EC_KEY*>(ctx)),
                                              point, buffer, len+1, NULL);
-        return ECDH_compute_key(secret, getDhSize(), point, static_cast<EC_KEY*>(ctx), NULL);
+        ret = ECDH_compute_key(secret, getDhSize(), point, static_cast<EC_KEY*>(ctx), NULL);
+        EC_POINT_free(point);
+        return ret;
     }
     return -1;
 }
@@ -351,8 +354,27 @@ int32_t ZrtpDH::getPubKeyBytes(uint8_t *buf) const
 
 int32_t ZrtpDH::checkPubKey(uint8_t *pubKeyBytes) const
 {
-    if (pkType == EC25 || pkType == EC38)
-        return 1;
+    if (pkType == EC25 || pkType == EC38) {
+        uint8_t buffer[100];
+        int32_t ret;
+        int32_t len = getPubKeySize();
+
+        buffer[0] = POINT_CONVERSION_UNCOMPRESSED;
+        memcpy(buffer+1, pubKeyBytes, len);
+
+        EC_POINT* point = EC_POINT_new(EC_KEY_get0_group(static_cast<EC_KEY*>(ctx)));
+        EC_POINT_oct2point(EC_KEY_get0_group(static_cast<EC_KEY*>(ctx)),
+                                             point, buffer, len+1, NULL);
+        EC_KEY* chkKey = EC_KEY_new();
+        EC_KEY_set_group(chkKey, EC_KEY_get0_group(static_cast<EC_KEY*>(ctx)));
+        EC_KEY_set_public_key(chkKey, point);
+        ret = EC_KEY_check_key(chkKey);
+
+        EC_POINT_free(point);
+        EC_KEY_free(chkKey);
+        
+        return ret;
+    }
 
     BIGNUM* pubKeyOther = BN_bin2bn(pubKeyBytes, getDhSize(), NULL);
 
