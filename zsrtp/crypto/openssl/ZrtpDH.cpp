@@ -233,7 +233,7 @@ ZrtpDH::ZrtpDH(const char* type) {
         }
         else if (pkType == DH3K) {
             tmpCtx->p = BN_dup(bnP3072);
-            RAND_bytes(random, 32);
+            RAND_bytes(random, 64);
             tmpCtx->priv_key = BN_bin2bn(random, 32, NULL);
         }
         break;

@@ -40,6 +40,7 @@ extern void initializeGcrypt();
 #include <gcrypt.h>            // the include of gcrypt
 #include <stdlib.h>
 #include <crypto/AesSrtp.h>
+#include <libzrtpcpp/crypto/twofish.h>
 
 #include <stdio.h>
 
@@ -47,7 +48,7 @@ AesSrtp::AesSrtp(int algo) : key(NULL), algorithm(algo) {
     initializeGcrypt();
 }
 
-AesSrtp::AesSrtp( uint8* k, int32 keyLength, int algo) : 
+AesSrtp::AesSrtp( uint8_t* k, int32_t keyLength, int algo) : 
     key(NULL),  algorithm(algo) {
 
     initializeGcrypt();
@@ -56,120 +57,172 @@ AesSrtp::AesSrtp( uint8* k, int32 keyLength, int algo) :
 
 AesSrtp::~AesSrtp() {
     if (key) {
-        gcry_cipher_close(static_cast<gcry_cipher_hd_t>(key));
+        if (algorithm == SrtpEncryptionAESCM)
+            gcry_cipher_close(static_cast<gcry_cipher_hd_t>(key));
+        else if (algorithm == SrtpEncryptionTWOCM)
+            delete[] (uint8_t*)key;
+
         key = NULL;
     }
 }
 
-bool AesSrtp::setNewKey(const uint8* k, int32 keyLength) {
+static int twoFishInit = 0;
+
+bool AesSrtp::setNewKey(const uint8_t* k, int32_t keyLength) {
 
     // release an existing key before setting a new one
-    if (key != NULL) {
-        gcry_cipher_close(static_cast<gcry_cipher_hd_t>(key));
-        key = NULL;
-    }
+    if (algorithm == SrtpEncryptionAESCM) {
+        if (key != NULL) {
+            gcry_cipher_close(static_cast<gcry_cipher_hd_t>(key));
+            key = NULL;
+        }
 
-    int algo = 0;
-    if (keyLength == 16) {
-        algo = GCRY_CIPHER_AES;
+        int algo = 0;
+        if (keyLength == 16) {
+            algo = GCRY_CIPHER_AES;
+        }
+        else if (keyLength == 32) {
+            algo = GCRY_CIPHER_AES256;
+        }
+        else {
+            return false;
+        }
+        gcry_cipher_hd_t tmp;
+        int err = gcry_cipher_open(&tmp, algo, GCRY_CIPHER_MODE_ECB, 0);
+        key = tmp;
+        err = gcry_cipher_setkey(static_cast<gcry_cipher_hd_t>(key), k, keyLength);
     }
-    else if (keyLength == 32) {
-        algo = GCRY_CIPHER_AES256;
+    else if (algorithm == SrtpEncryptionTWOCM) {
+        if (!twoFishInit) {
+            Twofish_initialise();
+            twoFishInit = 1;
+        }
+        if (key != NULL)
+            delete[] (uint8_t*)key;
+
+        key = new uint8_t[sizeof(Twofish_key)];
+        memset(key, 0, sizeof(Twofish_key));
+        Twofish_prepare_key((Twofish_Byte*)k, keyLength,  (Twofish_key*)key);
     }
-    else {
-	return false;
-    }
-    gcry_cipher_hd_t tmp;
-    int err = gcry_cipher_open(&tmp, algo, GCRY_CIPHER_MODE_ECB, 0);
-    key = tmp;
-    err = gcry_cipher_setkey(static_cast<gcry_cipher_hd_t>(key), k, keyLength);
+    else
+        return false;
+
     return true;
 }
 
 
-void AesSrtp::encrypt( const uint8* input, uint8* output ) {
+void AesSrtp::encrypt(const uint8_t* input, uint8_t* output) {
     if (key != NULL) {
-        gcry_cipher_encrypt (static_cast<gcry_cipher_hd_t>(key),
-                             output, SRTP_BLOCK_SIZE, input, SRTP_BLOCK_SIZE);
-    }
+        if (algorithm == SrtpEncryptionAESCM)
+            gcry_cipher_encrypt (static_cast<gcry_cipher_hd_t>(key),
+                                 output, SRTP_BLOCK_SIZE, input, SRTP_BLOCK_SIZE);
+        else if (algorithm == SrtpEncryptionTWOCM)
+            Twofish_encrypt((Twofish_key*)key, (Twofish_Byte*)input,
+                            (Twofish_Byte*)output);
+        }
 }
 
-void AesSrtp::get_ctr_cipher_stream( uint8* output, uint32 length,
-				     uint8* iv ) {
-    uint16 ctr;
-    uint16 input;
+void AesSrtp::get_ctr_cipher_stream( uint8_t* output, uint32_t length,
+                                     uint8_t* iv ) {
+    uint16_t ctr = 0;
 
-    unsigned char aes_input[SRTP_BLOCK_SIZE];
     unsigned char temp[SRTP_BLOCK_SIZE];
 
-    memcpy(aes_input, iv, 14 );
-    iv += 14;
+    for(ctr = 0; ctr < length/SRTP_BLOCK_SIZE; ctr++ ){
+        //compute the cipher stream
+        iv[14] = (uint8_t)((ctr & 0xFF00) >>  8);
+        iv[15] = (uint8_t)((ctr & 0x00FF));
 
-    for( ctr = 0; ctr < length/SRTP_BLOCK_SIZE; ctr++ ){
-	input = ctr;
-	//compute the cipher stream
-	aes_input[14] = (uint8)((input & 0xFF00) >>  8);
-	aes_input[15] = (uint8)((input & 0x00FF));
-
-        gcry_cipher_encrypt(static_cast<gcry_cipher_hd_t>(key), &output[ctr*SRTP_BLOCK_SIZE], SRTP_BLOCK_SIZE,
-                            aes_input, SRTP_BLOCK_SIZE);
+        encrypt(iv, &output[ctr*SRTP_BLOCK_SIZE]);
     }
     if ((length % SRTP_BLOCK_SIZE) > 0) {
         // Treat the last bytes:
-        input = ctr;
-        aes_input[14] = (uint8)((input & 0xFF00) >>  8);
-        aes_input[15] = (uint8)((input & 0x00FF));
+        iv[14] = (uint8_t)((ctr & 0xFF00) >>  8);
+        iv[15] = (uint8_t)((ctr & 0x00FF));
 
-        gcry_cipher_encrypt(static_cast<gcry_cipher_hd_t>(key), temp, SRTP_BLOCK_SIZE, aes_input, SRTP_BLOCK_SIZE);
+        encrypt(iv, temp);
         memcpy(&output[ctr*SRTP_BLOCK_SIZE], temp, length % SRTP_BLOCK_SIZE);
     }
 }
 
-
-void AesSrtp::ctr_encrypt( const uint8* input, uint32 input_length,
-			   uint8* output, uint8* iv ) {
-
-    if (key == NULL)
-	return;
-
-    uint8* cipher_stream = new uint8[input_length];
-
-    get_ctr_cipher_stream( cipher_stream, input_length, iv );
-
-    for( unsigned int i = 0; i < input_length; i++ ){
-	output[i] = cipher_stream[i] ^ input[i];
-    }
-    delete []cipher_stream;
-}
-
-void AesSrtp::ctr_encrypt( uint8* data, uint32 data_length, uint8* iv ) {
+void AesSrtp::ctr_encrypt( const uint8_t* input, uint32_t input_length,
+			   uint8_t* output, uint8_t* iv ) {
 
     if (key == NULL)
-	return;
+        return;
 
-    //unsigned char cipher_stream[data_length];
-    uint8* cipher_stream = new uint8[data_length];
+    uint16_t ctr = 0;
+    unsigned char temp[SRTP_BLOCK_SIZE];
 
-    get_ctr_cipher_stream( cipher_stream, data_length, iv );
+    int l = input_length/SRTP_BLOCK_SIZE;
+    for ( ctr = 0; ctr < l; ctr++ ) {
+        iv[14] = (uint8_t)((ctr & 0xFF00) >>  8);
+        iv[15] = (uint8_t)((ctr & 0x00FF));
 
-    for( uint32 i = 0; i < data_length; i++ ){
-	data[i] ^= cipher_stream[i];
+        encrypt(iv, temp);
+        for (int i = 0; i < SRTP_BLOCK_SIZE; i++ ) {
+            *output++ = temp[i] ^ *input++;
+        }
+
     }
-    delete[] cipher_stream;
+    l = input_length % SRTP_BLOCK_SIZE;
+    if (l > 0) {
+        // Treat the last bytes:
+        iv[14] = (uint8_t)((ctr & 0xFF00) >>  8);
+        iv[15] = (uint8_t)((ctr & 0x00FF));
+
+        encrypt(iv, temp);
+        for (int i = 0; i < l; i++ ) {
+            *output++ = temp[i] ^ *input++;
+        }
+    }
 }
 
-void AesSrtp::f8_encrypt(const uint8* data, uint32 data_length,
-			 uint8* iv, uint8* origKey, int32 keyLen,
-			 uint8* salt, int32 saltLen, AesSrtp* f8Cipher ) {
+void AesSrtp::ctr_encrypt( uint8_t* data, uint32_t data_length, uint8_t* iv ) {
 
-    f8_encrypt(data, data_length, const_cast<uint8*>(data), iv, origKey, keyLen, salt, saltLen, f8Cipher);
+    if (key == NULL)
+        return;
+    
+    uint16_t ctr = 0;
+    unsigned char temp[SRTP_BLOCK_SIZE];
+
+    int l = data_length/SRTP_BLOCK_SIZE;
+    for (ctr = 0; ctr < l; ctr++ ) {
+        iv[14] = (uint8_t)((ctr & 0xFF00) >>  8);
+        iv[15] = (uint8_t)((ctr & 0x00FF));
+
+        encrypt(iv, temp);
+        for (int i = 0; i < SRTP_BLOCK_SIZE; i++ ) {
+            *data++ ^= temp[i];
+        }
+
+    }
+    l = data_length % SRTP_BLOCK_SIZE;
+    if (l > 0) {
+        // Treat the last bytes:
+        iv[14] = (uint8_t)((ctr & 0xFF00) >>  8);
+        iv[15] = (uint8_t)((ctr & 0x00FF));
+
+        encrypt(iv, temp);
+        for (int i = 0; i < l; i++ ) {
+            *data++ ^= temp[i];
+        }
+    }
+
+}
+
+void AesSrtp::f8_encrypt(const uint8_t* data, uint32_t data_length,
+			 uint8_t* iv, uint8_t* origKey, int32_t keyLen,
+			 uint8_t* salt, int32_t saltLen, AesSrtp* f8Cipher ) {
+
+    f8_encrypt(data, data_length, const_cast<uint8_t*>(data), iv, origKey, keyLen, salt, saltLen, f8Cipher);
 }
 
 #define MAX_KEYLEN 32
 
-void AesSrtp::f8_encrypt(const uint8* in, uint32 in_length, uint8* out,
-			 uint8* iv, uint8* origKey, int32 keyLen,
-			 uint8* salt, int32 saltLen, AesSrtp* f8Cipher ) {
+void AesSrtp::f8_encrypt(const uint8_t* in, uint32_t in_length, uint8_t* out,
+			 uint8_t* iv, uint8_t* origKey, int32_t keyLen,
+			 uint8_t* salt, int32_t saltLen, AesSrtp* f8Cipher ) {
 
 
     unsigned char *cp_in, *cp_in1, *cp_out;
@@ -187,10 +240,10 @@ void AesSrtp::f8_encrypt(const uint8* in, uint32 in_length, uint8* out,
 	return;
 
     if (keyLen > MAX_KEYLEN)
-	return;
+        return;
 
     if (saltLen > keyLen)
-	return;
+        return;
 
     /*
      * Get memory for the derived IV (IV')
@@ -241,11 +294,11 @@ void AesSrtp::f8_encrypt(const uint8* in, uint32 in_length, uint8* out,
     }
 }
 
-int AesSrtp::processBlock(F8_CIPHER_CTX *f8ctx, const uint8* in, int32 length, uint8* out) {
+int AesSrtp::processBlock(F8_CIPHER_CTX *f8ctx, const uint8_t* in, int32_t length, uint8_t* out) {
 
     int i;
-    const uint8 *cp_in;
-    uint8* cp_in1, *cp_out;
+    const uint8_t *cp_in;
+    uint8_t* cp_in1, *cp_out;
     uint32_t *ui32p;
 
     /*
@@ -264,9 +317,9 @@ int AesSrtp::processBlock(F8_CIPHER_CTX *f8ctx, const uint8* in, int32 length, u
     ui32p[3] ^= htonl(f8ctx->J);
     f8ctx->J++;
     /*
-     * Now compute the new key stream using AES encrypt
+     * Now compute the new key stream using encrypt
      */
-    gcry_cipher_encrypt(static_cast<gcry_cipher_hd_t>(key), f8ctx->S, SRTP_BLOCK_SIZE, NULL, 0);
+    encrypt(f8ctx->S, f8ctx->S);
     /*
      * as the last step XOR the plain text with the key stream to produce
      * the ciphertext.
@@ -279,7 +332,6 @@ int AesSrtp::processBlock(F8_CIPHER_CTX *f8ctx, const uint8* in, int32 length, u
     }
     return length;
 }
-
 
 /** EMACS **
  * Local variables:

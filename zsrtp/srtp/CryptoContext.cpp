@@ -86,14 +86,14 @@ CryptoContext::CryptoContext( uint32_t ssrc,
         break;
 
     case SrtpEncryptionAESF8:
-        f8Cipher = new AesSrtp();
+        f8Cipher = new AesSrtp(SrtpEncryptionAESCM);
 
     case SrtpEncryptionAESCM:
         n_e = ekeyl;
         k_e = new uint8_t[n_e];
         n_s = skeyl;
         k_s = new uint8_t[n_s];
-        cipher = new AesSrtp();
+        cipher = new AesSrtp(SrtpEncryptionAESCM);
         break;
     }
 
@@ -167,7 +167,7 @@ void CryptoContext::srtpEncrypt(uint8_t* pkt, uint8_t* payload, uint32_t paylen,
     if (ealg == SrtpEncryptionNull) {
         return;
     }
-    if (ealg == SrtpEncryptionAESCM) {
+    if (ealg == SrtpEncryptionAESCM || ealg == SrtpEncryptionTWOCM) {
 
         /* Compute the CM IV (refer to chapter 4.1.1 in RFC 3711):
          *
@@ -193,7 +193,7 @@ void CryptoContext::srtpEncrypt(uint8_t* pkt, uint8_t* payload, uint32_t paylen,
         cipher->ctr_encrypt(payload, paylen, iv);
     }
 
-    if (ealg == SrtpEncryptionAESF8) {
+    if (ealg == SrtpEncryptionAESF8 || ealg == SrtpEncryptionTWOF8) {
 
         /* Create the F8 IV (refer to chapter 4.1.2.2 in RFC 3711):
          *

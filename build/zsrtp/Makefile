@@ -26,7 +26,8 @@ export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
 		   $(LDFLAGS) 
 
-ciphersossl = crypto/openssl/AesSrtp.o crypto/openssl/hmac.o \
+ciphersossl = crypto/openssl/AesSrtp.o \
+    crypto/openssl/hmac.o \
     crypto/openssl/ZrtpDH.o \
     crypto/openssl/hmac256.o \
     crypto/openssl/sha256.o \
@@ -36,6 +37,10 @@ ciphersossl = crypto/openssl/AesSrtp.o crypto/openssl/hmac.o \
 
 skeinmac = crypto/skein.o crypto/skein_block.o crypto/skeinApi.o \
     crypto/macSkein.o
+
+twofish = crypto/twofish.o \
+	crypto/twofish_cfb.o \
+	crypto/TwoCFB.o
 
 # Gcrypt support currently not tested
 #ciphersgcrypt = crypto/gcrypt/gcryptAesSrtp.o crypto/gcrypt/gcrypthmac.o \
@@ -68,7 +73,7 @@ srtpobj = srtp/ZsrtpCWrapper.o srtp/CryptoContext.o
 
 transportobj = transport_zrtp.o
 
-cryptobj =  $(ciphersossl) $(skeinmac)
+cryptobj =  $(ciphersossl) $(skeinmac) $(twofish)
 
 export ZSRTP_SRCDIR = ../../zsrtp
 export ZSRTP_OBJS = $(zrtpobj) $(cryptobj) $(srtpobj) $(transportobj)
