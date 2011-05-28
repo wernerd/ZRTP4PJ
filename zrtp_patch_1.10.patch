@@ -1,0 +1,131 @@
+diff --git a/pjsip/include/pjsua-lib/pjsua.h b/pjsip/include/pjsua-lib/pjsua.h
+index 0a6cbdd..394c893 100644
+--- a/pjsip/include/pjsua-lib/pjsua.h
++++ b/pjsip/include/pjsua-lib/pjsua.h
+@@ -420,6 +420,18 @@ typedef struct pjsua_reg_info
+ } pjsua_reg_info;
+ 
+ 
++typedef enum pjsua_create_media_transport_flag
++{
++   /**
++    * This flag indicates that the media transport must also close its
++    * "member" or "child" transport when pjmedia_transport_close() is
++    * called. If this flag is not specified, then the media transport
++    * must not call pjmedia_transport_close() of its member transport.
++    */
++   PJSUA_MED_TP_CLOSE_MEMBER = 1
++
++} pjsua_create_media_transport_flag;
++
+ /**
+  * This structure describes application callback to receive various event
+  * notification from PJSUA-API. All of these callbacks are OPTIONAL, 
+@@ -918,6 +930,31 @@ typedef struct pjsua_callback
+     void (*on_ice_transport_error)(int index, pj_ice_strans_op op,
+ 				   pj_status_t status, void *param);
+ 
++    /**
++     * This callback can be used by application to implement custom media
++     * transport adapter for the call, or to replace the media transport
++     * with something completely new altogether.
++     *
++     * This callback is called when a new call is created. The library has
++     * created a media transport for the call, and it is provided as the
++     * \a base_tp argument of this callback. Upon returning, the callback
++     * must return an instance of media transport to be used by the call.
++     *
++     * @param call_id       Call ID
++     * @param media_idx     The media index in the SDP for which this media
++     *                      transport will be used.
++     * @param base_tp       The media transport which otherwise will be
++     *                      used by the call has this callback not been
++     *                      implemented.
++     * @param flags         Bitmask from pjsua_create_media_transport_flag.
++     *
++     * @return              The callback must return an instance of media
++     *                      transport to be used by the call.
++     */
++    pjmedia_transport* (*on_create_media_transport)(pjsua_call_id call_id,
++                                                 unsigned media_idx,
++                                                 pjmedia_transport *base_tp,
++                                                 unsigned flags);
+ } pjsua_callback;
+ 
+ 
+diff --git a/pjsip/src/pjsua-lib/pjsua_media.c b/pjsip/src/pjsua-lib/pjsua_media.c
+index 47cf1e7..57f9f27 100644
+--- a/pjsip/src/pjsua-lib/pjsua_media.c
++++ b/pjsip/src/pjsua-lib/pjsua_media.c
+@@ -1174,7 +1174,8 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
+ {
+     pjsua_call *call = &pjsua_var.calls[call_id];
+     pj_status_t status;
+-
++    pjmedia_transport *app_tp = NULL;
++    
+ #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+     pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
+     pjmedia_srtp_setting srtp_opt;
+@@ -1232,7 +1233,8 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
+ 	call->med_tp = srtp;
+     }
+ #else
+-    call->med_orig = call->med_tp;
++    if (!call->media_orig)
++        call->med_orig = call->med_tp;
+     PJ_UNUSED_ARG(security_level);
+ #endif
+ 
+@@ -1258,6 +1260,48 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
+ 	call->audio_idx = find_audio_index(rem_sdp, srtp_active);
+     }
+ 
++    /*
++     * Check if applicaton wnats a callback on media transport creation.
++     * 
++     * Similar to check to create SRTP above:
++     * Call the application's callback only on first channel_init, not on
++     * a re-invite that does not change the channel setup.
++     * 
++     * If SRTP was compiled pjsua always creates the SRTP transport. In this
++     * case check if the current transport is SRTP transport. If yes then
++     * call the callback.
++     * 
++     * If SRTP was not compiled then check if med_orig and med_tp are the same.
++     * If yes call the callback.
++     */
++    if (pjsua_var.ua_cfg.cb.on_create_media_transport)
++    {
++        pjsua_create_media_transport_flag flag = 0;
++
++#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
++        if (call->med_tp == srtp) 
++        {
++
++            /* If the current transport is SRTP then the application's 
++             * transport shall close SRTP (SRTP itself will not close 
++             * it's slave transport, see above).
++             */
++            flag = PJSUA_MED_TP_CLOSE_MEMBER;
++#else
++        if (call->med_tp == call->med_orig)
++        {
++#endif
++            app_tp = pjsua_var.ua_cfg.cb.on_create_media_transport(call_id,
++                                                               call->audio_idx,
++                                                               call->med_tp,
++                                                               flag);
++            if (app_tp != NULL && app_tp != call->med_tp)
++            {
++                call->med_tp = app_tp;
++            }
++        }
++    }
++
+     /* Reject offer if we couldn't find a good m=audio line in offer */
+     if (call->audio_idx < 0) {
+ 	if (sip_err_code) *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
+-- 
+1.7.3.4
+
