@@ -53,7 +53,7 @@
 #define SIP_USER    "100"
 #define SIP_PASSWD  "secret"
 #define SIP_PORT    5060
-#define SIP_OUTBOUND_PROXY = "sip:172.16.102.1:5070"
+#define SIP_OUTBOUND_PROXY "sip:172.16.102.1:5070"
 
 
 
