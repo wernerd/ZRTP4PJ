@@ -31,9 +31,12 @@ The only prerequisits the build ZRTP for PJ are:
 - openSSL development environment
 - a C and C++ compiler (tested with gcc and g++)
 - installed and build pjproject - tested with 1.8.5 and 1.10 and the latest SVN trunk
-- to use ZRTP together with PJSUA you need to apply a patch to add a specific
-  ZRTP callback mechanism. The patch is quite small and should work without any
+- to use ZRTP together with PJSUA you may need to apply a patch to add a specific
+  callback mechanism. The patch is quite small and should work without any
   problems. After applying the patch just rebuild pjsip / pjsua.
+  *NOTE:* Since June 17th this callback function is part of the SVN version of
+  PJSIP and is available in the SVN branch 1.x. If you use this branch and a
+  recent SVN update then _do not apply the patch_.
 
 Copy the ZSRTP4PJ.tar to your pjproject's third_party directory, for example:
 
