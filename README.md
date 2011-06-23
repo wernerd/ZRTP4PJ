@@ -68,7 +68,7 @@ Now the ZRTP for PJ is ready to use.
 
 ## Building an application
 
-Create a makefile that contains follows the known pjproject pattern for
+Create a makefile that follows the known pjproject pattern for
 makefiles. The following annotated example shows the important parts of
 the example makefile (see example directory):
 
@@ -80,10 +80,10 @@ the example makefile (see example directory):
 
     # include the ZRTP specific build.mak. The ZRTP build process creates
     # this build.mak. It modifies some variable to include the ZRTP library
-    # and the include path
+    # and the ZRTP include path
     include $(PJBASE)/third_party/build/zsrtp/build.mak
 
-    # Make sure to the the C++ compiler as defined by $(PJ_CXX). This is
+    # Make sure to use the C++ compiler as defined by $(PJ_CXX). This is
     # necessary because GNU ZRTP uses C++
     CC      = $(PJ_CXX)
     LDFLAGS = $(PJ_LDFLAGS)
@@ -91,7 +91,7 @@ the example makefile (see example directory):
     CFLAGS  = $(PJ_CFLAGS)
     CPPFLAGS= ${CFLAGS}
 
-    # Here we create a modified version of pjproject's streamutil.
+    # Here we create a modified version of pjproject's simple_pjsua.
     all:  simple_pjsua # streamutilzrtp
 
     streamutilzrtp: streamutilzrtp.c
