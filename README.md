@@ -34,9 +34,9 @@ The only prerequisits the build ZRTP for PJ are:
 - to use ZRTP together with PJSUA you may need to apply a patch to add a specific
   callback mechanism. The patch is quite small and should work without any
   problems. After applying the patch just rebuild pjsip / pjsua.
-  *NOTE:* Since June 17th this callback function is part of the SVN version of
-  PJSIP and is available in the SVN branch 1.x. If you use this branch and a
-  recent SVN update then _do not apply the patch_.
+  *NOTE:* Since June 17th this callback function is part of the PJSIP's SVN repository
+  and is available in the SVN branch 1.x. If you use this branch and a
+  recent SVN version then _do not apply the patch_.
 
 Copy the ZSRTP4PJ.tar to your pjproject's third_party directory, for example:
 
