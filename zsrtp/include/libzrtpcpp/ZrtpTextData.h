@@ -57,6 +57,8 @@ extern char GoClearMsg[];
 extern char ClearAckMsg[];
 extern char PingMsg[];
 extern char PingAckMsg[];
+extern char SasRelayMsg[];
+extern char RelayAckMsg[];
 
 /**
  *
@@ -80,6 +82,7 @@ extern char sasString[];
 extern char KDFString[];
 extern char zrtpSessionKey[];
 extern char zrtpMsk[];
+extern char zrtpTrustedMitm[];
 
 
 extern char s256[];

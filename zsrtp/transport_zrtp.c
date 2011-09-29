@@ -132,6 +132,7 @@ struct tp_zrtp
     pj_bool_t enableZrtp;
     pj_bool_t started;
     pj_bool_t close_slave;
+    pj_bool_t mitmMode;
 };
 
 /* Forward declaration of thethe ZRTP specific callback functions that this
@@ -148,8 +149,8 @@ static void zrtp_zrtpNegotiationFailed(ZrtpContext* ctx, int32_t severity, int32
 static void zrtp_zrtpNotSuppOther(ZrtpContext* ctx) ;
 static void zrtp_synchEnter(ZrtpContext* ctx) ;
 static void zrtp_synchLeave(ZrtpContext* ctx) ;
-static void zrtp_zrtpAskEnrollment(ZrtpContext* ctx, char* info) ;
-static void zrtp_zrtpInformEnrollment(ZrtpContext* ctx, char* info) ;
+static void zrtp_zrtpAskEnrollment(ZrtpContext* ctx, int32_t info) ;
+static void zrtp_zrtpInformEnrollment(ZrtpContext* ctx, int32_t info) ;
 static void zrtp_signSAS(ZrtpContext* ctx, char* sas) ;
 static int32_t zrtp_checkSASSignature(ZrtpContext* ctx, char* sas) ;
 
@@ -371,6 +372,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_zrtp_create(pjmedia_endpt *endpt,
 
     zrtp->slave_tp = transport;
     zrtp->close_slave = close_slave;
+    zrtp->mitmMode = PJ_FALSE;
 
     /* Done */
     zrtp->refcount++;
@@ -386,10 +388,11 @@ PJ_DECL(pj_status_t) pjmedia_transport_zrtp_initialize(pjmedia_transport *tp,
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
 
     zrtp_initializeZrtpEngine(zrtp->zrtpCtx, &c_callbacks, zrtp->clientIdString,
-                              zidFilename, zrtp);
+                              zidFilename, zrtp, zrtp->mitmMode);
     zrtp->enableZrtp = autoEnable;
     return PJ_SUCCESS;
 }
+
 static void timer_callback(pj_timer_heap_t *ht, pj_timer_entry *e)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)e->user_data;
@@ -673,7 +676,7 @@ static void zrtp_synchLeave(ZrtpContext* ctx)
     pj_mutex_unlock(zrtp->zrtpMutex);
 }
 
-static void zrtp_zrtpAskEnrollment(ZrtpContext* ctx, char* info)
+static void zrtp_zrtpAskEnrollment(ZrtpContext* ctx, int32_t info)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
@@ -683,7 +686,7 @@ static void zrtp_zrtpAskEnrollment(ZrtpContext* ctx, char* info)
     }
 }
 
-static void zrtp_zrtpInformEnrollment(ZrtpContext* ctx, char* info)
+static void zrtp_zrtpInformEnrollment(ZrtpContext* ctx, int32_t info)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 

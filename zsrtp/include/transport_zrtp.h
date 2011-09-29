@@ -328,7 +328,7 @@ typedef struct zrtp_UserCallbacks
      *    Give some information to the user about the PBX requesting an
      *    enrollment.
      */
-    void (*zrtp_zrtpAskEnrollment)(void* data, char* info);
+    void (*zrtp_zrtpAskEnrollment)(void* data, int32_t info);
 
     /**
      * ZRTP transport calls this method to inform about PBX enrollment result.
@@ -342,7 +342,7 @@ typedef struct zrtp_UserCallbacks
      *    Give some information to the user about the result of an
      *    enrollment.
      */
-    void (*zrtp_zrtpInformEnrollment)(void* data, char* info);
+    void (*zrtp_zrtpInformEnrollment)(void* data, int32_t info);
 
     /**
      * ZRTP transport calls this method to request a SAS signature.
@@ -611,7 +611,7 @@ PJ_DECL(void) pjmedia_transport_zrtp_setLocalSSRC(pjmedia_transport *tp, uint32_
  * @see zrtp_isMultiStream()
  * @see zrtp_isMultiStreamAvailable()
  * @see zrtp_acceptEnrollment()
- * @see zrtp_setPBXEnrollment()
+ * @see zrtp_setMitmMode()
  * @see zrtp_setSignatureData()
  * @see zrtp_getSignatureData()
  * @see zrtp_getSignatureLength()

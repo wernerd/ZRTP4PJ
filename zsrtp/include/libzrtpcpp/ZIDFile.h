@@ -21,15 +21,14 @@
 
 #ifndef _ZIDFILE_H_
 #define _ZIDFILE_H_
-
 /**
  * @file ZIDFile.h
  * @brief ZID file management
- * 
+ *
  * A ZID file stores (caches) some data that helps ZRTP to achives its
  * key continuity feature. See @c ZIDRecord for further info which data
  * the ZID file contains.
- * 
+ *
  * @ingroup GNU_ZRTP
  * @{
  */
@@ -42,7 +41,7 @@
  * @author: Werner Dittmann <Werner.Dittmann@t-online.de>
  */
 
-class ZIDFile {
+class __EXPORT ZIDFile {
 
 private:
 
@@ -108,7 +107,7 @@ public:
      *
      * The method get the identifier data from the ZID record parameter,
      * locates the record in the ZID file and fills in the RS1, RS2, and
-     * other data. 
+     * other data.
      *
      * If no matching record exists in the ZID file the method creates
      * it and fills it with default values.

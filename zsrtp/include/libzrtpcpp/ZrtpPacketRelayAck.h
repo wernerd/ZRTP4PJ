@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2006-2007 Werner Dittmann
+  Copyright (C) 2007 - 2010 Werner Dittmann
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -15,12 +15,12 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _ZRTPPACKETHELLOACK_H_
-#define _ZRTPPACKETHELLOACK_H_
+#ifndef _ZRTPPACKETRELAYACK_H_
+#define _ZRTPPACKETRELAYACK_H_
 
 /**
- * @file ZrtpPacketHelloAck.h
- * @brief The ZRTP HelloAck message
+ * @file ZrtpPacketRelayAck.h
+ * @brief The ZRTP RelayAck message
  *
  * @ingroup GNU_ZRTP
  * @{
@@ -29,31 +29,28 @@
 #include <libzrtpcpp/ZrtpPacketBase.h>
 
 /**
- * Implement the HelloAck packet.
+ * Implement the RelayAck packet.
  *
- * The ZRTP simple message HelloAck. The implementation sends this
- * after receiving a Hello packet.
+ * The ZRTP simple message RelayAck. The implementation sends this
+ * after receiving and checking the SASrelay message.
  *
  * @author Werner Dittmann <Werner.Dittmann@t-online.de>
  */
-
-class __EXPORT ZrtpPacketHelloAck : public ZrtpPacketBase {
+class __EXPORT ZrtpPacketRelayAck : public ZrtpPacketBase {
 
  public:
-    /// Creates a HelloAck packet with default data
-    ZrtpPacketHelloAck();
+    /// Creates a RelayAck packet with default data
+    ZrtpPacketRelayAck();
 
-    /// Creates a HelloAck packet from received data
-    ZrtpPacketHelloAck(uint8_t* data);
-
-    virtual ~ZrtpPacketHelloAck();
+    /// Creates a RelayAck packet from received data
+    ZrtpPacketRelayAck(uint8_t* data);
+    virtual ~ZrtpPacketRelayAck();
 
  private:
-     HelloAckPacket_t data;
+     RelayAckPacket_t data;
 };
 
 /**
  * @}
  */
-#endif // ZRTPPACKETHELLOACK
-
+#endif  // _ZRTPPACKETRELAYACK_H_

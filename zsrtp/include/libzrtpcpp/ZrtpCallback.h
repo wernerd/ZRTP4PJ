@@ -29,6 +29,20 @@
 #include <stdint.h>
 #include <libzrtpcpp/ZrtpCodes.h>
 
+#ifndef __EXPORT
+  #if defined _WIN32 || defined __CYGWIN__
+    #define __EXPORT    __declspec(dllimport)
+    #define __LOCAL
+  #endif
+  #if __GNUC__ >= 4
+    #define __EXPORT    __attribute__ ((visibility("default")))
+    #define __LOCAL     __attribute__ ((visibility("hidden")))
+  #else
+    #define __EXPORT
+    #define __LOCAL
+  #endif
+#endif
+
 /**
  * This enum defines which role a ZRTP peer has.
  *
@@ -57,7 +71,7 @@ typedef enum {
     Sha1,           ///< Use Sha1 as authentication algorithm
     Skein           ///< Use Skein as authentication algorithm
 } SrtpAlgorithms;
-    
+
 /**
  * This structure contains pointers to the SRTP secrets and the role info.
  *
@@ -103,13 +117,13 @@ enum EnableSecurity {
  * @author Werner Dittmann <Werner.Dittmann@t-online.de>
  */
 
-class ZrtpCallback {
+class __EXPORT ZrtpCallback {
 
 protected:
     friend class ZRtp;
 
     virtual ~ZrtpCallback() {};
-    
+
     /**
      * Send a ZRTP packet via RTP.
      *
@@ -280,7 +294,7 @@ protected:
      * @param info Give some information to the user about the PBX
      *    requesting an enrollment.
      */
-    virtual void zrtpAskEnrollment(std::string info) =0;
+    virtual void zrtpAskEnrollment(GnuZrtpCodes::InfoEnrollment info) =0;
 
     /**
      * Inform about PBX enrollment result.
@@ -294,7 +308,7 @@ protected:
      * @param info Give some information to the user about the result
      *    of an enrollment.
      */
-    virtual void zrtpInformEnrollment(std::string info) =0;
+    virtual void zrtpInformEnrollment(GnuZrtpCodes::InfoEnrollment info) =0;
 
     /**
      * Request a SAS signature.
@@ -321,7 +335,7 @@ protected:
      * After ZRTP received a SAS signature in one of the Confirm packets it
      * call this method. The client may use <code>getSignatureLength()</code>
      * and <code>getSignatureData()</code>of ZrtpQueue to get the signature
-     * data and perform the signature check. Refer to chapter 8.2 of ZRTP 
+     * data and perform the signature check. Refer to chapter 8.2 of ZRTP
      * specification.
      *
      * If the signature check fails the client may return false to ZRTP. In

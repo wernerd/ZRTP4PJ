@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2006-2010 Werner Dittmann
+  Copyright (C) 2006-2011 Werner Dittmann
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -15,12 +15,12 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _ZRTPPACKETCONFIRM_H_
-#define _ZRTPPACKETCONFIRM_H_
+#ifndef _ZRTPPACKETSASRELAY_H_
+#define _ZRTPPACKETSASRELAY_H_
 
 /**
- * @file ZrtpPacketConfirm.h
- * @brief The ZRTP Confirm message
+ * @file ZrtpPacketSASrelay.h
+ * @brief The ZRTP SAS Relay message
  *
  * @ingroup GNU_ZRTP
  * @{
@@ -39,65 +39,59 @@
  * @author Werner Dittmann <Werner.Dittmann@t-online.de>
  */
 
-class __EXPORT ZrtpPacketConfirm : public ZrtpPacketBase {
+class __EXPORT ZrtpPacketSASrelay : public ZrtpPacketBase {
 
     private:
-        Confirm_t* confirmHeader;   ///< Point to the Confirm message part
+        SASrelay_t* sasRelayHeader;   ///< Point to the Confirm message part
 
     public:
         /// Creates a Confirm packet with default data
-        ZrtpPacketConfirm();
+        ZrtpPacketSASrelay();
 
         /// Creates a Confirm packet with default data and a given signature length
-        ZrtpPacketConfirm(uint32_t sl);
+        ZrtpPacketSASrelay(uint32_t sl);
 
         /// Creates a Confirm packet from received data
-        ZrtpPacketConfirm(uint8_t* d);
+        ZrtpPacketSASrelay(uint8_t* d);
 
         /// Normal destructor
-        virtual ~ZrtpPacketConfirm();
+        virtual ~ZrtpPacketSASrelay();
 
-        /// Check if SAS verify flag is set
-        const bool isSASFlag()            { return confirmHeader->flags & 0x4; }
-
-        /// Check if PBXEnrollment flag is set
-        const bool isPBXEnrollment()      { return confirmHeader->flags & 0x8; }
+        /// Check is SAS verify flag is set
+        const bool isSASFlag()            { return sasRelayHeader->flags & 0x4; }
 
         /// Get pointer to filler bytes (contains one bit of signature length)
-        const uint8_t* getFiller()        { return confirmHeader->filler; }
+        const uint8_t* getFiller()        { return sasRelayHeader->filler; }
 
         /// Get pointer to IV data, fixed byte array
-        const uint8_t* getIv()            { return confirmHeader->iv; }
+        const uint8_t* getIv()            { return sasRelayHeader->iv; }
 
         /// Get pointer to MAC data, fixed byte array
-        const uint8_t* getHmac()          { return confirmHeader->hmac; }
+        const uint8_t* getHmac()          { return sasRelayHeader->hmac; }
 
-        /// Get Expiration time data
-        const uint32_t getExpTime()       { return ntohl(confirmHeader->expTime); }
+        /// Get pointer to new SAS rendering algorithm, fixed byte array
+        const uint8_t* getSas() {return sasRelayHeader->sas; }
 
-        /// Get pointer to initial hash chain (H0) data, fixed byte array
-        uint8_t* getHashH0()              { return confirmHeader->hashH0; }
+        /// Get pointer to new SAS hash data, fixed byte array
+        const uint8_t* getTrustedSas() { return sasRelayHeader->trustedSasHash; }
 
         /// get the signature length in words
         uint32_t getSignatureLength();
 
         /// set SAS verified flag
-        void setSASFlag()            { confirmHeader->flags |= 0x4; }
-
-        /// set setPBXEnrollment flag
-        void setPBXEnrollment()      { confirmHeader->flags |= 0x8; }
+        void setSASFlag()            { sasRelayHeader->flags |= 0x4; }
 
         /// Set MAC data, fixed length byte array
-        void setHmac(uint8_t* text)  { memcpy(confirmHeader->hmac, text, sizeof(confirmHeader->hmac)); }
+        void setHmac(uint8_t* text)  { memcpy(sasRelayHeader->hmac, text, sizeof(sasRelayHeader->hmac)); }
 
         /// Set IV data, fixed length byte array
-        void setIv(uint8_t* text)    { memcpy(confirmHeader->iv, text, sizeof(confirmHeader->iv)); }
+        void setIv(uint8_t* text)    { memcpy(sasRelayHeader->iv, text, sizeof(sasRelayHeader->iv)); }
 
-        /// Set expiration time data
-        void setExpTime(uint32_t t)  { confirmHeader->expTime = htonl(t); }
+        /// Set SAS rendering algorithm, fixed length byte array
+        void setSas(uint8_t* text)    { memcpy(sasRelayHeader->sas, text, sizeof(sasRelayHeader->sas)); }
 
-        /// Set initial hash chain (H0) data, fixed length byte array
-        void setHashH0(uint8_t* t)   { memcpy(confirmHeader->hashH0, t, sizeof(confirmHeader->hashH0)); }
+        /// Set SAS hash data, fixed length byte array
+        void setTrustedSas(uint8_t* text)    { memcpy(sasRelayHeader->trustedSasHash, text, sizeof(sasRelayHeader->trustedSasHash)); }
 
         /// Set signature length in words
         void setSignatureLength(uint32_t sl);
@@ -115,5 +109,5 @@ class __EXPORT ZrtpPacketConfirm : public ZrtpPacketBase {
 /**
  * @}
  */
-#endif // ZRTPPACKETCONFIRM
+#endif // ZRTPPACKETSASRELAY
 

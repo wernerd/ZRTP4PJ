@@ -49,6 +49,8 @@ void aesCfbEncrypt(uint8_t* key, int32_t keyLength, uint8_t* IV, uint8_t *data,
     AES_KEY aesKey;
     int usedBytes = 0;
 
+//    initializeOpenSSL();
+
     memset(&aesKey, 0, sizeof( AES_KEY ) );
     if (keyLength == 16) {
         AES_set_encrypt_key(key, 128, &aesKey);
@@ -69,6 +71,8 @@ void aesCfbDecrypt(uint8_t* key, int32_t keyLength, const uint8_t* IV, uint8_t *
 {
     AES_KEY aesKey;
     int usedBytes = 0;
+
+//    initializeOpenSSL();
 
     memset(&aesKey, 0, sizeof( AES_KEY ) );
     if (keyLength == 16) {

@@ -1,5 +1,6 @@
 # Modify this to point to the PJSIP location.
-PJBASE=/path/to/pjsip
+# PJBASE=/path/to/pjsip
+PJBASE=~/devhome/pjproject.git
 
 include $(PJBASE)/build.mak
 
@@ -7,7 +8,8 @@ include $(PJBASE)/build.mak
 # The ZRTP4PJ build process creates a build.mak that sets or
 # extends some pjsib defined make variables
 #
-include /path/to/ZRTP4PJ/build/zsrtp/build.mak
+# include /path/to/ZRTP4PJ/build/zsrtp/build.mak
+include ~/devhome/ZRTP4PJ/build/zsrtp/build.mak
 
 # Make sure you use the CXX (C++) compiler/linker because
 # ZRTP is a C++ implementation and PJSIP uses a C-to-C++ wrapper
