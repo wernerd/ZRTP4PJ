@@ -63,6 +63,8 @@ zrtpobj = zrtp/ZrtpCallbackWrapper.o \
     zrtp/ZrtpPacketErrorAck.o \
     zrtp/ZrtpPacketPingAck.o \
     zrtp/ZrtpPacketPing.o \
+    zrtp/ZrtpPacketSASrelay.o \
+    zrtp/ZrtpPacketRelayAck.o \
     zrtp/ZrtpStateClass.o \
     zrtp/ZrtpTextData.o \
     zrtp/ZrtpConfigure.o \

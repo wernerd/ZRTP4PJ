@@ -81,10 +81,10 @@ void ZIDFile::checkDoMigration(char* name) {
 
     // create save file name, rename and re-open
     // if rename fails, just unlink old ZID file and create a brand new file
-    // just a little inconnvenience for the user, need to verify new SAS
+    // just a little inconvenience for the user, need to verify new SAS
     std::string fn = std::string(name) + std::string(".save");
     if (rename(name, fn.c_str()) < 0) {
-        unlink(name);
+	unlink(name);
         createZIDFile(name);
         return;
     }

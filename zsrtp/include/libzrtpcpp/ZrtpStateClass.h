@@ -21,7 +21,7 @@
 /**
  * @file ZrtpStateClass.h
  * @brief The ZRTP state handling class
- *  
+ *
  * @ingroup GNU_ZRTP
  * @{
  */
@@ -31,7 +31,7 @@
 
 /**
  * The ZRTP states
- * 
+ *
  * Depending on the role of this state engine and the actual protocl flow
  * not all states are processed during a ZRTP handshake.
  */
@@ -53,8 +53,8 @@ enum zrtpStates {
 };
 
 enum EventReturnCodes {
-    Fail = 0,			///< ZRTP event processing failed.
-    Done = 1			///< Event processing ok.
+    Fail = 0,           ///< ZRTP event processing failed.
+    Done = 1            ///< Event processing ok.
 };
 
 enum EventDataType {
@@ -63,6 +63,12 @@ enum EventDataType {
     ZrtpPacket,         ///< Normal ZRTP message event, process according to state
     Timer,              ///< Timer event
     ErrorPkt            ///< Error packet event
+};
+
+enum SecureSubStates {
+    Normal,
+    WaitSasRelayAck,
+    numberofSecureSubStates
 };
 
 /// A ZRTP state event
@@ -84,11 +90,11 @@ typedef struct Event {
  */
 typedef struct zrtpTimer {
     int32_t time,       ///< Current timeout value
-	start,              ///< Start value for timeout
-	increment,          ///< increment timeout after each timeout event (not used anymore)
-	capping,            ///< Maximum timeout value
-	counter,            ///< Current number of timeouts
-	maxResend;          ///< Maximum number of timeout resends
+    start,              ///< Start value for timeout
+    increment,          ///< increment timeout after each timeout event (not used anymore)
+    capping,            ///< Maximum timeout value
+    counter,            ///< Current number of timeouts
+    maxResend;          ///< Maximum number of timeout resends
 } zrtpTimer_t;
 
 
@@ -106,7 +112,7 @@ class ZRtp;
  */
 
 
-class ZrtpStateClass {
+class __EXPORT ZrtpStateClass {
 
 private:
     ZRtp* parent;           ///< The ZRTP implmentation
@@ -134,6 +140,25 @@ private:
      * variant of ZRTP. Refer to chapter 5.4.2 in the ZRTP specification.
      */
     bool multiStream;
+    
+    // Secure substate to handle SAS relay packets
+    SecureSubStates secSubstate;
+
+    /**
+     * Secure Sub state WaitSasRelayAck.
+     *
+     * This state belongs to the secure substates and handles
+     * SAS Relay Ack. 
+     *
+     * When entering this transition function
+     * - sentPacket contains Error packet, Error timer active
+     *
+     * Possible events in this state are:
+     * - timeout for sent SAS Relay packet: causes a resend check and repeat sending
+     *   of packet
+     * - SASRelayAck: Stop timer and switch to secure substate Normal.
+     */
+    bool subEvWaitRelayAck();
 
 public:
     /// Create a ZrtpStateClass
@@ -142,7 +167,7 @@ public:
 
     /// Check if in a specified state
     bool inState(const int32_t state) { return engine->inState(state); };
-    
+
     /// Switch to the specified state
     void nextState(int32_t state)        { engine->nextState(state); };
 
@@ -274,9 +299,21 @@ public:
      * This functions returns the value of the multi-stream mode flag.
      *
      * @return
-     *    Value of the multi-stream mode flag. 
+     *    Value of the multi-stream mode flag.
      */
     bool isMultiStream();
+
+    /**
+     * Send a SAS relay packet.
+     *
+     * Get the SAS relay packet and send it. It stores the
+     * packet in the sentPacket variable to enable resending. The
+     * method switches to secure substate WaitSasRelayAck.
+     * 
+     * @param errorCode Is the sub error code of ZrtpError. The method sends
+     *   the value of this sub code to the peer.
+     */
+    void sendSASRelay(ZrtpPacketSASrelay* relay);
 };
 
 /**

@@ -57,7 +57,7 @@
 
 
 
-char* InfoCodes[] =
+const char* InfoCodes[] =
 {
     "EMPTY",
     "Hello received, preparing a Commit",
@@ -76,7 +76,7 @@ char* InfoCodes[] =
 /**
  * Sub-codes for Warning
  */
-char* WarningCodes [] =
+const char* WarningCodes [] =
 {
     "EMPTY",
     "Commit contains an AES256 cipher but does not offer a Diffie-Helman 4096",
@@ -92,7 +92,7 @@ char* WarningCodes [] =
 /**
  * Sub-codes for Severe
  */
-char* SevereCodes[] =
+const char* SevereCodes[] =
 {
     "EMPTY",
     "Hash HMAC check of Hello failed!",
@@ -150,11 +150,11 @@ static void zrtpNotSuppOther(void* data)
 {
     PJ_LOG(3,(THIS_FILE, "ZRTP not supported by other peer"));
 }
-static void zrtpAskEnrollment(void* data, char* info)
+static void zrtpAskEnrollment(void* data, int32_t info)
 {
     PJ_LOG(3,(THIS_FILE, "ZRTP - Ask PBX enrollment"));
 }
-static void zrtpInformEnrollment(void* data, char* info)
+static void zrtpInformEnrollment(void* data, int32_t info)
 {
     PJ_LOG(3,(THIS_FILE, "ZRTP - Inform PBX enrollement"));
 }

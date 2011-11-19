@@ -184,6 +184,16 @@ enum zrtp_ZrtpErrorCodes {
     zrtp_IgnorePacket =      0x7fffffff /*!< Internal state, not reported */
 };
 
+/**
+ * Information codes for the Enrollment user callbacks.
+ */
+enum zrtp_InfoEnrollment {
+    zrtp_EnrollmentRequest,              //!< Aks user to confirm or deny an Enrollemnt request
+    zrtp_EnrollmentCanceled,             //!< User did not confirm the PBX enrollement
+    zrtp_EnrollmentFailed,               //!< Enrollment process failed, no PBX secret available
+    zrtp_EnrollmentOk                    //!< Enrollment process for this PBX was ok
+};
+
 /* The ZRTP protocol states */
 enum zrtpStates {
     Initial,            /*!< Initial state after starting the state engine */
@@ -286,15 +296,16 @@ extern "C"
         * Send a ZRTP packet via RTP.
         *
         * ZRTP calls this method to send a ZRTP packet via the RTP session.
+        * The ZRTP packet will have to be created using the provided ZRTP message.
         *
         * @param ctx
         *    Pointer to the opaque ZrtpContext structure.
         * @param data
-        *    Points to ZRTP packet to send.
+        *    Points to ZRTP message to send.
         * @param length
         *    The length in bytes of the data
         * @return
-        *    zero if sending failed, one if packet was send
+        *    zero if sending failed, one if packet was sent
         */
         int32_t (*zrtp_sendDataZRTP) (ZrtpContext* ctx, const uint8_t* data, int32_t length ) ;
 
@@ -350,7 +361,7 @@ extern "C"
          * structure is destroyed after the callback method returns to the
          * ZRTP implementation.
          *
-         * The SRTP data themselfs are ontained in the ZRtp object and are
+         * The SRTP data themselves are obtained in the ZRtp object and are
          * valid as long as the ZRtp object is active. TheZRtp's
          * destructor clears the secrets. Thus the called method needs to
          * save the pointers only, ZRtp takes care of the data.
@@ -447,11 +458,11 @@ extern "C"
         /**
          * Enter synchronization mutex.
          *
-         * GNU ZRTP requires one mutes to synchronize its
+         * GNU ZRTP requires one mutex to synchronize its
          * processing. Because mutex implementations depend on the
          * underlying infrastructure, for example operating system or
          * thread implementation, GNU ZRTP delegates mutex handling to the
-         * spcific part of its implementation.
+         * specific part of its implementation.
          *
          * @param ctx
          *    Pointer to the opaque ZrtpContext structure.
@@ -480,7 +491,7 @@ extern "C"
          * @param info Give some information to the user about the PBX
          *    requesting an enrollment.
          */
-        void (*zrtp_zrtpAskEnrollment) (ZrtpContext* ctx, char* info ) ;
+        void (*zrtp_zrtpAskEnrollment) (ZrtpContext* ctx, int32_t info) ;
 
         /**
          * Inform about PBX enrollment result.
@@ -496,7 +507,7 @@ extern "C"
          * @param info Give some information to the user about the result
          *    of an enrollment.
          */
-        void (*zrtp_zrtpInformEnrollment) (ZrtpContext* ctx, char* info ) ;
+        void (*zrtp_zrtpInformEnrollment) (ZrtpContext* ctx, int32_t info ) ;
 
         /**
          * Request a SAS signature.
@@ -504,7 +515,7 @@ extern "C"
          * After ZRTP was able to compute the Short Authentication String
          * (SAS) it calls this method. The client may now use an
          * approriate method to sign the SAS. The client may use
-         * ZrtpQueue#setSignatureData() to store the signature data an
+         * ZrtpQueue#setSignatureData() to store the signature data and
          * enable signature transmission to the other peer. Refer to
          * chapter 8.2 of ZRTP specification.
          *
@@ -559,7 +570,7 @@ extern "C"
      * Initialize the ZRTP protocol engine.
      *
      * This method initialized the GNU ZRTP protocol engine. An application
-     * call this method to actually create the ZRTP protocol engine and
+     * calls this method to actually create the ZRTP protocol engine and
      * initialize its configuration data. This method does not start the
      * protocol engine.
      *
@@ -581,6 +592,9 @@ extern "C"
      * @param userData
      *     A pointer to user data. The wrapper just stores this pointer in
      *     the ZrtpContext and the application may use it for its purposes.
+     * @param mitmMode
+     *     A trusted Mitm (PBX) must set this to true. The ZRTP engine sets
+     *     the M Flag in the Hello packet to announce a trusted MitM.
      * @returns
      *      Pointer to the ZrtpContext
      *
@@ -588,9 +602,10 @@ extern "C"
      */
     void zrtp_initializeZrtpEngine(ZrtpContext* zrtpContext,
                                    zrtp_Callbacks *cb,
-                                   char* id,
+                                   const char* id,
                                    const char* zidFilename,
-                                   void* userData);
+                                   void* userData,
+                                   int32_t mitmMode);
 
     /**
      * Destroy the ZRTP wrapper and its underlying objects.
@@ -613,7 +628,7 @@ extern "C"
     int32_t zrtp_CheckCksum(uint8_t* buffer, uint16_t length, uint32_t crc);
 
     /**
-     * Computes the ZRTP checksum over a newly created  ZRTP packet buffer.
+     * Computes the ZRTP checksum over a newly created ZRTP packet buffer.
      *
      * @param buffer
      *    Pointer to the created ZRTP packet buffer
@@ -651,7 +666,7 @@ extern "C"
     /**
      * Stop ZRTP security.
      *
-     * <b>NOTE: application shall never call this method directly but use the
+     * <b>NOTE: An application shall never call this method directly but use the
      * appropriate method provided by the RTP implementation. </b>
      *
      * @param zrtpContext
@@ -665,7 +680,7 @@ extern "C"
      * This method expects to get a pointer to the message part of
      * a ZRTP packet.
      *
-     * <b>NOTE: application shall never call this method directly. Only
+     * <b>NOTE: An application shall never call this method directly. Only
      * the module that implements the RTP binding shall use this method</b>
      *
      * @param zrtpContext
@@ -726,32 +741,17 @@ extern "C"
     void zrtp_setAuxSecret(ZrtpContext* zrtpContext, uint8_t* data, int32_t length);
 
     /**
-     * Set the PBX secret.
-     *
-     * Use this method to set the PBX secret data. Refer to ZRTP
-     * specification, chapter 4.3 ff and 7.3
-     *
-     * @param zrtpContext
-     *    Pointer to the opaque ZrtpContext structure.
-     * @param data
-     *     Points to the other PBX data.
-     * @param length
-     *     The length in bytes of the data.
-     */
-    void zrtp_setPbxSecret(ZrtpContext* zrtpContext, uint8_t* data, int32_t length);
-
-    /**
      * Check current state of the ZRTP state engine
      *
      * <b>NOTE: application usually don't call this method. Only
-     * the module that implements the RTP binding shall use this method</b>
+     * the m-odule that implements the RTP binding shall use this method</b>
      *
      * @param zrtpContext
      *    Pointer to the opaque ZrtpContext structure.
      * @param state
      *    The state to check.
      * @return
-     *    Returns true id ZRTP engine is in the given state, false otherwise.
+     *    Returns true if ZRTP engine is in the given state, false otherwise.
      */
     int32_t zrtp_inState(ZrtpContext* zrtpContext, int32_t state);
 
@@ -836,7 +836,7 @@ extern "C"
      *    The integer that contains the length of the char array
      * @param parameters
      *     A char array that contains the multi-stream parameters that this
-     *     new ZRTP instanace shall use. See also
+     *     new ZRTP instance shall use. See also
      *     <code>getMultiStrParams()</code>
      */
     void zrtp_setMultiStrParams(ZrtpContext* zrtpContext, char* parameters, int32_t length);
@@ -882,23 +882,67 @@ extern "C"
      *     True if the enrollment request is accepted, false otherwise.
      */
     void zrtp_acceptEnrollment(ZrtpContext* zrtpContext, int32_t accepted);
-
+    
     /**
-     * Enable PBX enrollment
-     *
-     * The application calls this method to allow or disallow PBX enrollment.
-     * If the applications allows PBX enrollment then the ZRTP implementation
-     * honors the PBX enrollment flag in Confirm packets. Refer to chapter 7.3
-     * for further details of PBX enrollment.
-     *
+     * Check the state of the enrollment mode.
+     * 
+     * If true then we will set the enrollment flag (E) in the confirm
+     * packets and performs the enrollment actions. A MitM (PBX) enrollment service 
+     * started this ZRTP session. Can be set to true only if mitmMode is also true.
+     * 
      * @param zrtpContext
      *    Pointer to the opaque ZrtpContext structure.
-     * @param yesNo
-     *    If set to true then ZRTP honors the PBX enrollment flag in Commit
-     *    packets and calls the appropriate user callback methods. If
-     *    the parameter is set to false ZRTP ignores the PBX enrollment flags.
+     * @return status of the enrollmentMode flag.
      */
-    void zrtp_setPBXEnrollment(ZrtpContext* zrtpContext, int32_t yesNo);
+    int32_t zrtp_isEnrollmentMode(ZrtpContext* zrtpContext);
+
+    /**
+     * Check the state of the enrollment mode.
+     * 
+     * If true then we will set the enrollment flag (E) in the confirm
+     * packets and perform the enrollment actions. A MitM (PBX) enrollment 
+     * service must sets this mode to true. 
+     * 
+     * Can be set to true only if mitmMode is also true. 
+     * 
+     * @param zrtpContext
+     *    Pointer to the opaque ZrtpContext structure.
+     * @param enrollmentMode defines the new state of the enrollmentMode flag
+     */
+    void zrtp_setEnrollmentMode(ZrtpContext* zrtpContext, int32_t enrollmentMode);
+
+    /**
+     * Send the SAS relay packet.
+     * 
+     * The method creates and sends a SAS relay packet according to the ZRTP
+     * specifications. Usually only a MitM capable user agent (PBX) uses this
+     * function.
+     * 
+     * @param zrtpContext
+     *    Pointer to the opaque ZrtpContext structure.
+     * @param sh the full SAS hash value
+     * @param render the SAS rendering algorithm
+     */
+    int32_t zrtp_sendSASRelayPacket(ZrtpContext* zrtpContext, uint8_t* sh, char* render);
+
+    /**
+     * Get the commited SAS rendering algorithm for this ZRTP session.
+     * 
+     * @param zrtpContext
+     *    Pointer to the opaque ZrtpContext structure.
+     * @return the commited SAS rendering algorithm
+     */
+    const char* zrtp_getSasType(ZrtpContext* zrtpContext);
+ 
+    /**
+     * Get the computed SAS hash for this ZRTP session.
+     * 
+     * @param zrtpContext
+     *    Pointer to the opaque ZrtpContext structure.
+     * @return a pointer to the byte array that contains the full 
+     *         SAS hash.
+     */
+    uint8_t* zrtp_getSasHash(ZrtpContext* zrtpContext);
 
     /**
      * Set signature data
@@ -992,7 +1036,7 @@ extern "C"
      *    Number of bytes copied into the data buffer - must be equivalent
      *    to 12 bytes.
      */
-    int32_t zrtp_getZid(ZrtpContext* zrtpContext, uint8_t* data);
+    int32_t zrtp_getPeerZid(ZrtpContext* zrtpContext, uint8_t* data);
 
 
     /**

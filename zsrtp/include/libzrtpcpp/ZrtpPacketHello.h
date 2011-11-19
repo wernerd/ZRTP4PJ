@@ -21,7 +21,7 @@
 /**
  * @file ZrtpPacketHello.h
  * @brief The ZRTP Hello message
- *  
+ *
  * @ingroup GNU_ZRTP
  * @{
  */
@@ -40,18 +40,17 @@
  * @author Werner Dittmann <Werner.Dittmann@t-online.de>
  */
 
-class ZrtpPacketHello : public ZrtpPacketBase {
+class __EXPORT ZrtpPacketHello : public ZrtpPacketBase {
 
  protected:
     Hello_t* helloHeader;   ///< Point to the Hello message part
-    bool passive;           ///< Set if the client shall be passive (not implemented)
-    
+
     int32_t nHash,          ///< number of hash algorithms offered
     nCipher,                ///< number of cipher algorithms offered
     nPubkey,                ///< number of key agreement algorithms offered
     nSas,                   ///< number of SAS algorithms offered
     nAuth;                  ///< number of SRTP authentication algorithms offered
-    
+
     int32_t oHash,          ///< offsets in bytes to hash algorithm names
     oCipher,                ///< offsets in bytes to cipher algorithm names
     oPubkey,                ///< offsets in bytes to key agreement algorithm names
@@ -65,17 +64,17 @@ class ZrtpPacketHello : public ZrtpPacketBase {
 
     /// Creates a Hello packet from received data
     ZrtpPacketHello(uint8_t *data);
-    
+
     virtual ~ZrtpPacketHello();
 
     /**
      * Set configure data and populate Hello message data.
-     * 
+     *
      * Fill in the offered Algorithm names and compute all offset to
      * names and MAC. An application must call this method on Hello message
      * objects created with the standard constructor (with default data)
      * before the application can use most of the getter and setter methods.
-     * 
+     *
      * @param config
      *    Pointer to ZrtpConfigure data.
      */
@@ -101,12 +100,15 @@ class ZrtpPacketHello : public ZrtpPacketBase {
 
     /// Set H3 hash in Hello message, fixed byte array
     void setH3(uint8_t *hash)          { memcpy(helloHeader->hashH3, hash, sizeof(helloHeader->hashH3)); }
-    
+
     /// Set client ZID in Hello message, fixed bytes array
     void setZid(uint8_t *text)         { memcpy(helloHeader->zid, text, sizeof(helloHeader->zid)); }
 
     /// Check passive mode (mode not implemented)
-    bool isPassive()       { return passive; };
+    bool isPassive()       { return helloHeader->flags & 0x10; };
+
+    /// Check if MitM flag ise set
+    bool isMitmMode()       { return helloHeader->flags & 0x20; };
 
     /// Get hash algorithm name at position n, fixed ASCII character array
     uint8_t* getHashType(int32_t n)   { return ((uint8_t*)helloHeader)+oHash+(n*ZRTP_WORD_SIZE); }
@@ -119,7 +121,7 @@ class ZrtpPacketHello : public ZrtpPacketBase {
 
     /// Get key agreement algorithm name at position n, fixed ASCII character array
     uint8_t* getPubKeyType(int32_t n) { return ((uint8_t*)helloHeader)+oPubkey+(n*ZRTP_WORD_SIZE); }
-    
+
     /// Get SAS algorithm name at position n, fixed ASCII character array
     uint8_t* getSasType(int32_t n)    { return ((uint8_t*)helloHeader)+oSas+(n*ZRTP_WORD_SIZE); }
 
@@ -165,11 +167,14 @@ class ZrtpPacketHello : public ZrtpPacketBase {
     /// Get number of offered SRTP authentication algorithms
     int32_t getNumAuth()     {return nAuth; }
 
+    /// set MitM flag
+    void setMitmMode()            { helloHeader->flags |= 0x20; }
+
 
  private:
      // Hello packet is of variable length. It maximum size is 46 words:
-     // - 11 words fixed sizze 
-     // - up to 35 words variable part, depending on number of algorithms 
+     // - 11 words fixed sizze
+     // - up to 35 words variable part, depending on number of algorithms
      // leads to a maximum of 4*46=184 bytes.
      uint8_t data[256];       // large enough to hold a full blown Hello packet
 };
