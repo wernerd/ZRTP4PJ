@@ -116,6 +116,10 @@ struct tp_zrtp
     int32_t  unprotect_err;
     int32_t refcount;
     pj_timer_entry timeoutEntry;
+#ifdef DYNAMIC_TIMER
+    pj_pool_t* timer_pool;
+    pj_timer_heap_t* timer_heap;
+#endif
     pj_mutex_t* zrtpMutex;
     ZsrtpContext* srtpReceive;
     ZsrtpContext* srtpSend;
@@ -177,6 +181,7 @@ static zrtp_Callbacks c_callbacks =
 
 static void timer_callback(pj_timer_heap_t *ht, pj_timer_entry *e);
 
+#ifndef DYNAMIC_TIMER
 /**
  * The static, singleton Timer implementation
  */
@@ -316,7 +321,7 @@ static int timer_cancel_entry(pj_timer_entry* entry)
 /*
  * End of timer implementation
  */
-
+#endif
 
 //                                         1
 //                                1234567890123456
@@ -348,6 +353,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_zrtp_create(pjmedia_endpt *endpt,
                       (PJMEDIA_TRANSPORT_TYPE_USER + 2);
     zrtp->base.op = &tp_zrtp_op;
 
+#ifndef DYNAMIC_TIMER
     if (timer_pool == NULL)
     {
         timer_pool = pjmedia_endpt_create_pool(endpt, "zrtp_timer", 256, 256);
@@ -359,6 +365,17 @@ PJ_DEF(pj_status_t) pjmedia_transport_zrtp_create(pjmedia_endpt *endpt,
             return rc;
         }
     }
+#else
+    zrtp->timer_heap = NULL;
+    zrtp->timer_pool = pjmedia_endpt_create_pool(endpt, "zrtp_timer", 256, 256);
+    rc = pj_timer_heap_create(zrtp->timer_pool, 4, &zrtp->timer_heap);
+	if (rc != PJ_SUCCESS)
+	{
+		pj_pool_release(zrtp->timer_pool);
+		pj_pool_release(zrtp->pool);
+		return rc;
+	}
+#endif
 
     /* Create the empty wrapper */
     zrtp->zrtpCtx = zrtp_CreateWrapper();
@@ -450,7 +467,13 @@ static int32_t zrtp_activateTimer(ZrtpContext* ctx, int32_t time)
     timeout.msec = time % 1000;
 
     pj_timer_entry_init(&zrtp->timeoutEntry, 0, zrtp, &timer_callback);
+#ifndef DYNAMIC_TIMER
     timer_add_entry(&zrtp->timeoutEntry, &timeout);
+#else
+    if(zrtp->timer_heap != NULL){
+    	pj_timer_heap_schedule(zrtp->timer_heap, &zrtp->timeoutEntry, &timeout);
+    }
+#endif
 
     return 1;
 }
@@ -459,7 +482,13 @@ static int32_t zrtp_cancelTimer(ZrtpContext* ctx)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
+#ifndef DYNAMIC_TIMER
     timer_cancel_entry(&zrtp->timeoutEntry);
+#else
+    if(zrtp->timer_heap != NULL){
+    	pj_timer_heap_cancel(zrtp->timer_heap, &zrtp->timeoutEntry);
+    }
+#endif
 
     return 1;
 }
