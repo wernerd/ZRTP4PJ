@@ -745,6 +745,13 @@ PJ_DEF(void) pjmedia_transport_zrtp_setUserCallback(pjmedia_transport *tp, zrtp_
     zrtp->userCallback = ucb;
 }
 
+PJ_DEF(void* )pjmedia_transport_zrtp_getUserData(pjmedia_transport *tp){
+	struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
+	pj_assert(tp);
+
+	return zrtp->userCallback->userData;
+}
+
 PJ_DEF(void) pjmedia_transport_zrtp_startZrtp(pjmedia_transport *tp)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;

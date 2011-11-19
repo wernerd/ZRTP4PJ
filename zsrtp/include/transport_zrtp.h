@@ -532,6 +532,16 @@ PJ_DECL(pj_bool_t) pjmedia_transport_zrtp_isEnableZrtp(pjmedia_transport *tp);
 PJ_DECL(void) pjmedia_transport_zrtp_setUserCallback(pjmedia_transport *tp, zrtp_UserCallbacks* ucb);
 
 /**
+ * Get the application user data from a given transport
+ * @param tp
+ *      Pointer to the ZRTP transport data as returned by
+ *      @c pjmedia_transport_zrtp_create.
+ * @return userData
+ * 		Pointer to the user data the in C_UserCallbacks
+ */
+PJ_DECL(void*) pjmedia_transport_zrtp_getUserData(pjmedia_transport *tp);
+
+/**
  * Starts the ZRTP protocol engine.
  *
  * Applications may call this method to immediatly start the ZRTP protocol
