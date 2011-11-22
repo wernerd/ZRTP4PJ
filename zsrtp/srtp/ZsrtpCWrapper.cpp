@@ -21,6 +21,7 @@
 #include <ZsrtpCWrapper.h>
 #include <pjmedia/rtp.h>
 #include <pjmedia/errno.h>
+#include <pj/string.h>
 #include <arpa/inet.h>
 
 ZsrtpContext* zsrtp_CreateWrapper(uint32_t ssrc, int32_t roc,
@@ -198,7 +199,7 @@ int32_t zsrtp_unprotect(ZsrtpContext* ctx, uint8_t* buffer, int32_t length,
     uint8_t* mac = new uint8_t[pcc->getTagLength()];
 
     pcc->srtpAuthenticate(buffer, length, guessedRoc, mac);
-    if (memcmp(tag, mac, pcc->getTagLength()) != 0) {
+    if (pj_memcmp(tag, mac, pcc->getTagLength()) != 0) {
         delete[] mac;
         return -1;
     }

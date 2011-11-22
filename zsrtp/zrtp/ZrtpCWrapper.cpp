@@ -78,6 +78,8 @@ void zrtp_DestroyWrapper(ZrtpContext* zrtpContext) {
     zrtpContext->configure = NULL;
     
     delete zrtpContext;
+
+    initialized = 0;
 }
 
 static int32_t zrtp_initZidFile(const char* zidFilename) {
