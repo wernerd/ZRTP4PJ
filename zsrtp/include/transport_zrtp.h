@@ -166,6 +166,7 @@
  */
 
 #define MAX_RTP_BUFFER_LEN  1024
+#define MAX_RTCP_BUFFER_LEN  1300
 
 #define PJMEDIA_TRANSPORT_TYPE_ZRTP PJMEDIA_TRANSPORT_TYPE_USER+2
 
@@ -602,6 +603,26 @@ PJ_DECL(void) pjmedia_transport_zrtp_stopZrtp(pjmedia_transport *tp);
 PJ_DECL(void) pjmedia_transport_zrtp_setLocalSSRC(pjmedia_transport *tp, uint32_t ssrc);
 
 /**
+ * Check the state of the MitM mode flag.
+ *
+ * If true then this ZRTP session acts as MitM, usually enabled by a PBX
+ * client (user agent)
+ *
+ * @return state of mitmMode
+ */
+PJ_DECL(pj_bool_t) pjmedia_transport_zrtp_isMitmMode(pjmedia_transport *tp);
+
+/**
+ * Set the state of the MitM mode flag.
+ *
+ * If MitM mode is set to true this ZRTP session acts as MitM, usually
+ * enabled by a PBX client (user agent).
+ *
+ * @param mitmMode defines the new state of the mitmMode flag
+ */
+PJ_DECL(void) pjmedia_transport_zrtp_setMitmMode(pjmedia_transport *tp, pj_bool_t mitmMode);
+
+/**
  * Get the ZRTP context pointer.
  *
  * Appplications need the ZRTP context pointer if they call ZRTP specific
@@ -621,7 +642,6 @@ PJ_DECL(void) pjmedia_transport_zrtp_setLocalSSRC(pjmedia_transport *tp, uint32_
  * @see zrtp_isMultiStream()
  * @see zrtp_isMultiStreamAvailable()
  * @see zrtp_acceptEnrollment()
- * @see zrtp_setMitmMode()
  * @see zrtp_setSignatureData()
  * @see zrtp_getSignatureData()
  * @see zrtp_getSignatureLength()

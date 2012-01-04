@@ -18,6 +18,7 @@
 */
 
 #include <CryptoContext.h>
+#include <CryptoContextCtrl.h>
 #include <ZsrtpCWrapper.h>
 #include <pjmedia/rtp.h>
 #include <pjmedia/errno.h>
@@ -106,7 +107,6 @@ int32_t zsrtp_protect(ZsrtpContext* ctx, uint8_t* buffer, int32_t length,
     const pjmedia_rtp_hdr *hdr;
     uint8_t* payload;
     int32_t payloadlen;
-    pj_status_t rc;
     uint16_t seqnum;
     uint32_t ssrc;
 
@@ -114,7 +114,7 @@ int32_t zsrtp_protect(ZsrtpContext* ctx, uint8_t* buffer, int32_t length,
     if (pcc == NULL) {
         return 0;
     }
-    rc = zsrtp_decode_rtp(buffer, length, &hdr, &payload, &payloadlen);
+    zsrtp_decode_rtp(buffer, length, &hdr, &payload, &payloadlen);
 
     seqnum = hdr->seq;
     seqnum = ntohs(seqnum);
@@ -148,7 +148,6 @@ int32_t zsrtp_unprotect(ZsrtpContext* ctx, uint8_t* buffer, int32_t length,
     const pjmedia_rtp_hdr *hdr;
     uint8_t* payload;
     int32_t payloadlen;
-    pj_status_t rc;
     uint16_t seqnum;
     uint32_t ssrc;
 
@@ -156,7 +155,7 @@ int32_t zsrtp_unprotect(ZsrtpContext* ctx, uint8_t* buffer, int32_t length,
         return 0;
     }
 
-    rc = zsrtp_decode_rtp(buffer, length, &hdr, &payload, &payloadlen);
+    zsrtp_decode_rtp(buffer, length, &hdr, &payload, &payloadlen);
 
     /*
      * This is the setting of the packet data when we come to this
@@ -227,3 +226,128 @@ void zsrtp_deriveSrtpKeys(ZsrtpContext* ctx, uint64_t index)
 {
     ctx->srtp->deriveSrtpKeys(index);
 }
+
+
+/*
+ * Implement the wrapper for SRTCP crypto context
+ */
+ZsrtpContextCtrl* zsrtp_CreateWrapperCtrl( uint32_t ssrc,
+                                           const  int32_t ealg,
+                                           const  int32_t aalg,
+                                           uint8_t* masterKey,
+                                           int32_t  masterKeyLength,
+                                           uint8_t* masterSalt,
+                                           int32_t  masterSaltLength,
+                                           int32_t  ekeyl,
+                                           int32_t  akeyl,
+                                           int32_t  skeyl,
+                                           int32_t  tagLength )
+{
+    ZsrtpContextCtrl* zc = new ZsrtpContextCtrl;
+    zc->srtcp = new CryptoContextCtrl(ssrc, ealg, aalg, masterKey, masterKeyLength, masterSalt,
+                                      masterSaltLength, ekeyl, akeyl, skeyl, tagLength );
+    
+    zc->srtcpIndex = 0;
+    return zc;
+}
+
+
+void zsrtp_DestroyWrapperCtrl (ZsrtpContextCtrl* ctx)
+{
+    if (ctx == NULL)
+        return;
+
+    delete ctx->srtcp;
+    ctx->srtcp = NULL;
+
+    delete ctx;
+}
+
+int32_t zsrtp_protectCtrl(ZsrtpContextCtrl* ctx, uint8_t* buffer, int32_t length,
+                      int32_t* newLength)
+{
+    CryptoContextCtrl* pcc = ctx->srtcp;
+
+    if (pcc == NULL) {
+        return 0;
+    }
+    /* Encrypt the packet */
+
+    pcc->srtcpEncrypt(buffer + 8, length - 8, ctx->srtcpIndex, pcc->getSsrc());
+
+    uint32_t encIndex = ctx->srtcpIndex | 0x80000000;  // set the E flag
+
+    // Fill SRTCP index as last word
+    uint32_t* ip = reinterpret_cast<uint32_t*>(buffer+length);
+    *ip = htonl(encIndex);   
+
+    // NO MKI support yet - here we assume MKI is zero. To build in MKI
+    // take MKI length into account when storing the authentication tag.
+
+    // Compute MAC and store in packet after the SRTCP index field
+    pcc->srtcpAuthenticate(buffer, length, encIndex, buffer + length + sizeof(uint32_t));
+
+    ctx->srtcpIndex++;
+    ctx->srtcpIndex &= ~0x80000000;       // clear possible overflow
+    *newLength = length + pcc->getTagLength() + sizeof(uint32_t);
+    
+    return 1;
+}
+
+int32_t zsrtp_unprotectCtrl(ZsrtpContextCtrl* ctx, uint8_t* buffer, int32_t length,
+                            int32_t* newLength)
+{
+    CryptoContextCtrl* pcc = ctx->srtcp;
+
+    if (pcc == NULL) {
+        return 0;
+    }
+
+    // Compute the total length of the payload
+    int32_t payloadLen = length - (pcc->getTagLength() + pcc->getMkiLength() + 4);
+    *newLength = payloadLen;
+    
+    // point to the SRTCP index field just after the real payload
+    const uint32_t* index = reinterpret_cast<uint32_t*>(buffer + payloadLen);
+
+    uint32_t encIndex = ntohl(*index);
+    uint32_t remoteIndex = encIndex & ~0x80000000;    // index without Encryption flag
+    
+    if (!pcc->checkReplay(remoteIndex)) {
+       return -2;
+    }
+    
+    uint8_t mac[20];
+
+    // Now get a pointer to the authentication tag field
+    const uint8_t* tag = buffer + (length - pcc->getTagLength());
+    
+    // Authenticate includes the index, but not MKI and not (obviously) the tag itself
+    pcc->srtcpAuthenticate(buffer, payloadLen, encIndex, mac);
+    if (memcmp(tag, mac, pcc->getTagLength()) != 0) {
+        return -1;
+    }
+
+    // Decrypt the content, exclude the very first SRTCP header (fixed, 8 bytes)
+    if (encIndex & 0x80000000)
+        pcc->srtcpEncrypt(buffer + 8, payloadLen - 8, remoteIndex, pcc->getSsrc());
+
+    // Update the Crypto-context
+    pcc->update(remoteIndex);
+
+    return 1;
+}
+
+void zsrtp_newCryptoContextForSSRCCtrl(ZsrtpContextCtrl* ctx, uint32_t ssrc)
+{
+    CryptoContextCtrl* newCrypto = ctx->srtcp->newCryptoContextForSSRC(ssrc);
+    ctx->srtcp = newCrypto;
+}
+
+void zsrtp_deriveSrtpKeysCtrl(ZsrtpContextCtrl* ctx)
+{
+    ctx->srtcp->deriveSrtcpKeys();
+}
+
+
+

@@ -22,8 +22,8 @@
 
 /**
  * @file ZsrtpCWrapper.h
- * @brief C-to-C++ wrapper for the C++ based SRTP implementation
- * @defgroup Z_SRTP SRTP implementation for ZRTP including C-to-C++ wrapper
+ * @brief C-to-C++ wrapper for the C++ based SRTP and SRTCP implementation
+ * @defgroup Z_SRTP SRTP/SRTCP implementation for ZRTP including C-to-C++ wrapper
  * @ingroup PJMEDIA_TRANSPORT_ZRTP
  * @{
  */
@@ -134,7 +134,6 @@ extern "C"
      * @returns
      *     Pointer to a new ZSRTP wrapper context.
      */
-
     ZsrtpContext* zsrtp_CreateWrapper(uint32_t ssrc, int32_t roc,
                                       int64_t  keyDerivRate,
                                       const  int32_t ealg,
@@ -199,8 +198,8 @@ extern "C"
      *     The ZsrtpContext
      *
      * @param buffer
-     *     Pointer to the data that contains the SRTP packet data. SRTP appends
-     *     the authentication code to the encrypted RTP packet data.
+     *     Pointer to the data that contains the SRTP packet data. SRTP removes
+     *     the authentication code from the decrypted RTP packet data.
      *
      * @param length
      *     Length of the RTP data buffer.
@@ -227,6 +226,8 @@ extern "C"
      * Before the application can use this crypto context it must call
      * the <code>deriveSrtpKeys</code> method.
      *
+     * @param ctx
+     *     The ZsrtpContext
      * @param ssrc
      *     The SSRC for this context
      * @param roc
@@ -244,6 +245,8 @@ extern "C"
      * session salt key. This method must be called at least once after the
      * SRTP Cryptograhic context was set up.
      *
+     * @param ctx
+     *     The ZsrtpContext
      * @param index
      *    The 48 bit SRTP packet index. See the <code>guessIndex</code>
      *    method.
@@ -251,6 +254,191 @@ extern "C"
     void zsrtp_deriveSrtpKeys(ZsrtpContext* ctx, uint64_t index);
 
 
+    typedef struct CryptoContextCtrl CryptoContextCtrl;
+
+    typedef struct zsrtcpContext
+    {
+        CryptoContextCtrl* srtcp;
+        void* userData;
+        uint32_t srtcpIndex;
+    } ZsrtpContextCtrl;
+
+    /**
+     * Constructor for an active SRTP cryptographic context.
+     *
+     * This constructor creates an active SRTP cryptographic context were
+     * algorithms are enabled, keys are computed and so on. This SRTP
+     * cryptographic context can protect a RTP SSRC stream.
+     *
+     * @param ssrc
+     *    The RTP SSRC that this SRTP cryptographic context protects.
+     *
+     * @param ealg
+     *    The encryption algorithm to use. Possible values are <code>
+     *    SrtpEncryptionNull, SrtpEncryptionAESCM, SrtpEncryptionAESF8
+     *    </code>. See chapter 4.1.1 for AESCM (Counter mode) and 4.1.2
+     *    for AES F8 mode.
+     *
+     * @param aalg
+     *    The authentication algorithm to use. Possible values are <code>
+     *    SrtpEncryptionNull, SrtpAuthenticationSha1Hmac</code>. The only
+     *    active algorithm here is SHA1 HMAC, a SHA1 based hashed message
+     *    authentication code as defined in RFC 2104.
+     *
+     * @param masterKey
+     *    Pointer to the master key for this SRTP cryptographic context.
+     *    Must point to <code>masterKeyLength</code> bytes. Refer to chapter
+     *    3.2.1 of the RFC about the role of the master key.
+     *
+     * @param masterKeyLength
+     *    The length in bytes of the master key in bytes. The length must
+     *    match the selected encryption algorithm. Because SRTP uses AES
+     *    based  encryption only, then master key length may be 16 or 32
+     *    bytes (128 or 256 bit master key)
+     *
+     * @param masterSalt
+     *    SRTP uses the master salt to computer the initialization vector
+     *    that in turn is input to compute the session key, session
+     *    authentication key and the session salt.
+     *
+     * @param masterSaltLength
+     *    The length in bytes of the master salt data in bytes. SRTP uses
+     *    AES as encryption algorithm. AES encrypts 16 byte blocks
+     *    (independent of the key length). According to RFC3711 the standard
+     *    value for the master salt length should be 112 bit (14 bytes).
+     *
+     * @param ekeyl
+     *    The length in bytes of the session encryption key that SRTP shall
+     *    compute and use. Usually the same length as for the master key
+     *    length. But you may use a different length as well. Be carefull
+     *    that the key management mechanisms supports different key lengths.
+     *
+     * @param akeyl
+     *    The length in bytes of the session authentication key. SRTP
+     *    computes this key and uses it as input to the authentication
+     *    algorithm.
+     *    The standard value is 160 bits (20 bytes).
+     *
+     * @param skeyl
+     *    The length in bytes of the session salt. SRTP computes this salt
+     *    key and uses it as input during encryption. The length usually
+     *    is the same as the master salt length.
+     *
+     * @param tagLength
+     *    The length is bytes of the authentication tag that SRTP appends
+     *    to the RTP packet. Refer to chapter 4.2. in the RFC 3711.
+     */
+    ZsrtpContextCtrl* zsrtp_CreateWrapperCtrl( uint32_t ssrc,
+               const  int32_t ealg,
+               const  int32_t aalg,
+               uint8_t* masterKey,
+               int32_t  masterKeyLength,
+               uint8_t* masterSalt,
+               int32_t  masterSaltLength,
+               int32_t  ekeyl,
+               int32_t  akeyl,
+               int32_t  skeyl,
+               int32_t  tagLength );
+
+    /**
+     * Destroy a ZSRTCP wrapper Context
+     * 
+     * @param ctx
+     *     A ZSRTCP wrapper context.
+     */
+    void zsrtp_DestroyWrapperCtrl (ZsrtpContextCtrl* ctx);
+
+    /**
+     * Encrypt the RTCP payload and compute authentication code.
+     *
+     * The method requires a ready made RTCP packet in the RTCP packet data
+     * buffer.
+     *
+     * The method computes an authentication code and appends this code to the
+     * buffer and computes a new length. The RTCP packet buffer must be large
+     * enough to hold this authentication code.
+     *
+     * @param ctx
+     *     The ZsrtpContextCtrl
+     *
+     * @param buffer
+     *     Pointer to the data that contains the RTP packet data. SRTP appends
+     *     the authentication code to the encrypted RTP packet data.
+     *
+     * @param length
+     *     Length of the RTCP data buffer.
+     *
+     * @param newLength
+     *     The new length of the RTCP data buffer including authentication code
+     * 
+     * @returns
+     *     0 if no active SRTCP crypto context, 1 if data is encrypted.
+     */
+    int32_t zsrtp_protectCtrl(ZsrtpContextCtrl* ctx, uint8_t* buffer, int32_t length,
+                          int32_t* newLength);
+
+    /**
+     * Decrypt the RTCP payload and check authentication code.
+     *
+     * The method requires a SRTCP packet in the SRTP packet data
+     * buffer.
+     *
+     * SRTP checks SRTP packet replay, then it computes the authentication
+     * code and checks if the authentication code is correct. If the checks
+     * are ok then SRTP decrypts the payload data.
+     *
+     * @param ctx
+     *     The ZsrtpContextCtrl
+     *
+     * @param buffer
+     *     Pointer to the data that contains the SRTCP packet data. SRTCP remove
+     *     the authentication code from the decrypted RTCP packet data.
+     *
+     * @param length
+     *     Length of the RTP data buffer.
+     *
+     * @param newLength
+     *     The new length of the RTCP data buffer excluding authentication code
+     * 
+     * @returns
+     *     0 if no active SRTCP crypto context, 1 if data is decrypted,
+     *     -1 if data authentication failed, -2 if SRTCP replay check failed
+     */
+    int32_t zsrtp_unprotectCtrl(ZsrtpContextCtrl* ctx, uint8_t* buffer, int32_t length,
+                            int32_t* newLength);
+
+    /**
+     * Derive a new Crypto Context for use with a new SSRC
+     *
+     * This method stores a new Crypto Context initialized with the data
+     * of this crypto context. Replacing the SSRC, Roll-over-Counter, and
+     * the key derivation rate the application cab use this Crypto Context
+     * to encrypt / decrypt a new stream (Synchronization source) inside
+     * one RTP session.
+     *
+     * Before the application can use this crypto context it must call
+     * the <code>deriveSrtpKeys</code> method.
+     *
+     * @param ctx
+     *     The ZsrtpContextCtrl
+     * @param ssrc
+     *     The SSRC for this context
+     */
+    void zsrtp_newCryptoContextForSSRCCtrl(ZsrtpContextCtrl* ctx, uint32_t ssrc);
+
+    /**
+     * Perform key derivation according to SRTP specification
+     *
+     * This method computes the session key, session authentication key and the
+     * session salt key. This method must be called at least once after the
+     * SRTP Cryptograhic context was set up.
+     *
+     * @param ctx
+     *     The ZsrtpContextCtrl
+     */                                    
+    void zsrtp_deriveSrtpKeysCtrl(ZsrtpContextCtrl* ctx);
+    
+    
 #ifdef __cplusplus
 }
 #endif

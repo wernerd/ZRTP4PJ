@@ -71,7 +71,7 @@ zrtpobj = zrtp/ZrtpCallbackWrapper.o \
     zrtp/ZrtpCWrapper.o \
     zrtp/Base32.o
 
-srtpobj = srtp/ZsrtpCWrapper.o srtp/CryptoContext.o
+srtpobj = srtp/ZsrtpCWrapper.o srtp/CryptoContext.o srtp/CryptoContextCtrl.o
 
 transportobj = transport_zrtp.o
 
