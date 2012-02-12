@@ -863,6 +863,7 @@ PJ_DEF(void) pjmedia_transport_zrtp_stopZrtp(pjmedia_transport *tp)
 
     pj_assert(tp && zrtp->zrtpCtx);
 
+    zrtp_stopZrtpEngine(zrtp->zrtpCtx);
     zrtp_DestroyWrapper(zrtp->zrtpCtx);
     zrtp->zrtpCtx = NULL;
     zrtp->started = 0;
