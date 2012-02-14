@@ -272,8 +272,10 @@ int32_t zsrtp_protectCtrl(ZsrtpContextCtrl* ctx, uint8_t* buffer, int32_t length
         return 0;
     }
     /* Encrypt the packet */
+    uint32_t ssrc = *(reinterpret_cast<uint32_t*>(buffer + 4)); // always SSRC of sender
+    ssrc = ntohl(ssrc);
 
-    pcc->srtcpEncrypt(buffer + 8, length - 8, ctx->srtcpIndex, pcc->getSsrc());
+    pcc->srtcpEncrypt(buffer + 8, length - 8, ctx->srtcpIndex, ssrc);
 
     uint32_t encIndex = ctx->srtcpIndex | 0x80000000;  // set the E flag
 
@@ -328,9 +330,12 @@ int32_t zsrtp_unprotectCtrl(ZsrtpContextCtrl* ctx, uint8_t* buffer, int32_t leng
         return -1;
     }
 
+    uint32_t ssrc = *(reinterpret_cast<uint32_t*>(buffer + 4)); // always SSRC of sender
+    ssrc = ntohl(ssrc);
+
     // Decrypt the content, exclude the very first SRTCP header (fixed, 8 bytes)
     if (encIndex & 0x80000000)
-        pcc->srtcpEncrypt(buffer + 8, payloadLen - 8, remoteIndex, pcc->getSsrc());
+        pcc->srtcpEncrypt(buffer + 8, payloadLen - 8, remoteIndex, ssrc);
 
     // Update the Crypto-context
     pcc->update(remoteIndex);
