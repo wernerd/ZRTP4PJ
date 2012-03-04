@@ -14,15 +14,10 @@ The structure is:
     build/zsrtp/             # contains the Makefile
     example/                 # a modified simple_pjsua.c
     zsrtp/                   # Contains transport_zrtp
-    |-- crypto               # crypto modules that use
-    |   |-- gcrypt           # gcrypt as backend (not yet supported)
-    |   `-- openssl          # openssl as backend
     |-- include
-    |   |-- crypto           # *.h files for SRTP crypto
-    |   `-- libzrtpcpp       # *.h files for GNU ZRTP core library
-    |       `-- crypto       # *.h files for ZRTP crypto
-    |-- srtp                 # SRTP source
-    `-- zrtp                 # GNU ZRTP sources
+    |   `-- crypto           # *.h files for PJSIP ZRTP transport and SRTP
+    |-- srtp                 # SRTP source for PJSIP
+    `-- zrtp                 # GNU ZRTP sources, cloned via 'getzrtp.sh'
 
 
 ## Building
@@ -39,6 +34,10 @@ The only prerequisits the build ZRTP for PJ are:
   and is available in the SVN branch 1.x. If you use this branch and a
   recent SVN version then _do not apply the patch_ and just use ZRTP4PJ.
 
+You may clone this directory or get the pre-packaged tar file (see
+Download). If ou clone this repository just change to the cloned repository
+and skip the steps to copy and unpack the tar file.
+
 Copy the ZSRTP4PJ.tar to your pjproject's third_party directory, for example:
 
     cp ZSRTP4PJ.tar ~/development/pjproject/third_party
@@ -48,11 +47,22 @@ Unpack the tar file:
     cd ~/development/pjproject/third_party
     tar xvf ZSRTP4PJ.tar
 
-This unpacks all files into their correct places. Before you can build the
-project you need to adjust a path setting in the Makefile. Change to the 
-correct build directory and open the Makefile file with your preferred text
-edito. Adjust the setting of the variable PJDIR to your environment. Store
-the makefile and run make dep and make.
+The tar file and the cloned repository does not contain the ZRTP and its
+associated SRTP sources. To get these sources change to the _zsrtp_ directory
+and get the sources.
+
+    cd zsrtp
+    sh getzrtp.sh
+    cd ..
+
+The shell scripts clones the ZRTP source repository into the _zrtp_
+directoy. If this directory already exists then the script updates the sources
+to get the latest version.
+
+Before you can build the project you need to adjust a path setting in the
+Makefile. Change to the correct build directory and open the Makefile file
+with your preferred text edito. Adjust the setting of the variable PJDIR to
+your environment. Store the makefile and run make dep and make.
 
     cd build/zsrtp
     make dep
