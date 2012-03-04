@@ -15,7 +15,9 @@ export ZSRTP_LIB := ../../lib/libzsrtp-$(TARGET_NAME)$(LIBEXT)
 # Gather all flags.
 #
 export _CFLAGS 	:= $(CC_INC). $(CC_INC)../../zsrtp/include \
-		   $(CC_INC)../../zsrtp/include/crypto \
+		   $(CC_INC)../../zsrtp/zrtp/src \
+		   $(CC_INC)../../zsrtp/zrtp/srtp \
+		   $(CC_INC)../../zsrtp/zrtp/srtp/crypto \
 		   $(CC_INC)$(PJDIR)/pjlib/include \
 		   $(CC_INC)$(PJDIR)/pjlib-util/include \
 		   $(CC_INC)$(PJDIR)/pjmedia/include \
@@ -26,52 +28,52 @@ export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
 		   $(LDFLAGS) 
 
-ciphersossl = crypto/openssl/AesSrtp.o \
-    crypto/openssl/hmac.o \
-    crypto/openssl/ZrtpDH.o \
-    crypto/openssl/hmac256.o \
-    crypto/openssl/sha256.o \
-    crypto/openssl/hmac384.o \
-    crypto/openssl/sha384.o \
-    crypto/openssl/AesCFB.o
+ciphersossl = zrtp/srtp/crypto/openssl/AesSrtp.o \
+    zrtp/srtp/crypto/openssl/hmac.o \
+    zrtp/src/libzrtpcpp/crypto/openssl/ZrtpDH.o \
+    zrtp/src/libzrtpcpp/crypto/openssl/hmac256.o \
+    zrtp/src/libzrtpcpp/crypto/openssl/sha256.o \
+    zrtp/src/libzrtpcpp/crypto/openssl/hmac384.o \
+    zrtp/src/libzrtpcpp/crypto/openssl/sha384.o \
+    zrtp/src/libzrtpcpp/crypto/openssl/AesCFB.o
 
-skeinmac = crypto/skein.o crypto/skein_block.o crypto/skeinApi.o \
-    crypto/macSkein.o
+skeinmac = zrtp/srtp/crypto/skein.o zrtp/srtp/crypto/skein_block.o zrtp/srtp/crypto/skeinApi.o \
+    zrtp/srtp/crypto/macSkein.o
 
-twofish = crypto/twofish.o \
-	crypto/twofish_cfb.o \
-	crypto/TwoCFB.o
+twofish = zrtp/src/libzrtpcpp/crypto/twofish.o \
+	zrtp/src/libzrtpcpp/crypto/twofish_cfb.o \
+	zrtp/src/libzrtpcpp/crypto/TwoCFB.o
 
 # Gcrypt support currently not tested
 #ciphersgcrypt = crypto/gcrypt/gcryptAesSrtp.o crypto/gcrypt/gcrypthmac.o \
 #          crypto/gcrypt/InitializeGcrypt.o
 
-zrtpobj = zrtp/ZrtpCallbackWrapper.o \
-    zrtp/ZIDFile.o \
-    zrtp/ZIDRecord.o \
-    zrtp/ZRtp.o \
-    zrtp/ZrtpCrc32.o \
-    zrtp/ZrtpPacketCommit.o \
-    zrtp/ZrtpPacketConf2Ack.o \
-    zrtp/ZrtpPacketConfirm.o \
-    zrtp/ZrtpPacketDHPart.o \
-    zrtp/ZrtpPacketGoClear.o \
-    zrtp/ZrtpPacketClearAck.o \
-    zrtp/ZrtpPacketHelloAck.o \
-    zrtp/ZrtpPacketHello.o \
-    zrtp/ZrtpPacketError.o \
-    zrtp/ZrtpPacketErrorAck.o \
-    zrtp/ZrtpPacketPingAck.o \
-    zrtp/ZrtpPacketPing.o \
-    zrtp/ZrtpPacketSASrelay.o \
-    zrtp/ZrtpPacketRelayAck.o \
-    zrtp/ZrtpStateClass.o \
-    zrtp/ZrtpTextData.o \
-    zrtp/ZrtpConfigure.o \
-    zrtp/ZrtpCWrapper.o \
-    zrtp/Base32.o
+zrtpobj = zrtp/src/ZrtpCallbackWrapper.o \
+    zrtp/src/ZIDFile.o \
+    zrtp/src/ZIDRecord.o \
+    zrtp/src/ZRtp.o \
+    zrtp/src/ZrtpCrc32.o \
+    zrtp/src/ZrtpPacketCommit.o \
+    zrtp/src/ZrtpPacketConf2Ack.o \
+    zrtp/src/ZrtpPacketConfirm.o \
+    zrtp/src/ZrtpPacketDHPart.o \
+    zrtp/src/ZrtpPacketGoClear.o \
+    zrtp/src/ZrtpPacketClearAck.o \
+    zrtp/src/ZrtpPacketHelloAck.o \
+    zrtp/src/ZrtpPacketHello.o \
+    zrtp/src/ZrtpPacketError.o \
+    zrtp/src/ZrtpPacketErrorAck.o \
+    zrtp/src/ZrtpPacketPingAck.o \
+    zrtp/src/ZrtpPacketPing.o \
+    zrtp/src/ZrtpPacketSASrelay.o \
+    zrtp/src/ZrtpPacketRelayAck.o \
+    zrtp/src/ZrtpStateClass.o \
+    zrtp/src/ZrtpTextData.o \
+    zrtp/src/ZrtpConfigure.o \
+    zrtp/src/ZrtpCWrapper.o \
+    zrtp/src/Base32.o
 
-srtpobj = srtp/ZsrtpCWrapper.o srtp/CryptoContext.o srtp/CryptoContextCtrl.o
+srtpobj = srtp/ZsrtpCWrapper.o zrtp/srtp/CryptoContext.o zrtp/srtp/CryptoContextCtrl.o
 
 transportobj = transport_zrtp.o
 
@@ -114,7 +116,6 @@ clean print_lib:
 
 realclean:
 	$(subst @@,$(subst /,$(HOST_PSEP),.ilbc-$(TARGET_NAME).depend),$(HOST_RMR))
-	
 	$(MAKE) -f $(RULES_MAK) APP=ZSRTP app=libzsrtp $@
 
 depend:
