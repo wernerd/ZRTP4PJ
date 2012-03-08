@@ -16,6 +16,7 @@ export ZSRTP_LIB := ../../lib/libzsrtp-$(TARGET_NAME)$(LIBEXT)
 #
 export _CFLAGS 	:= $(CC_INC). $(CC_INC)../../zsrtp/include \
 		   $(CC_INC)../../zsrtp/zrtp/src \
+		   $(CC_INC)../../zsrtp/zrtp/src/libzrtpcpp \
 		   $(CC_INC)../../zsrtp/zrtp/srtp \
 		   $(CC_INC)../../zsrtp/zrtp/srtp/crypto \
 		   $(CC_INC)$(PJDIR)/pjlib/include \
@@ -28,7 +29,7 @@ export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
 		   $(LDFLAGS) 
 
-ciphersossl = zrtp/srtp/crypto/openssl/AesSrtp.o \
+ciphersossl = zrtp/srtp/crypto/openssl/SrtpSymCrypto.o \
     zrtp/srtp/crypto/openssl/hmac.o \
     zrtp/src/libzrtpcpp/crypto/openssl/ZrtpDH.o \
     zrtp/src/libzrtpcpp/crypto/openssl/hmac256.o \
