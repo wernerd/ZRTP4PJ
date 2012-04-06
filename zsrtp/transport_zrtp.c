@@ -1270,6 +1270,28 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
         /* Do checking stuffs here.. */
     }
 
+    {
+      /* Add zrtp-hash attribute to both INVITE and 200 OK. */
+      char *zrtp_hello_hash = zrtp_getHelloHash(zrtp->zrtpCtx);
+      if (zrtp_hello_hash && *zrtp_hello_hash) {
+        int zrtp_hello_hash_len = strlen(zrtp_hello_hash);
+        pj_str_t *zrtp_hash_str = PJ_POOL_ALLOC_T(sdp_pool, pj_str_t);
+        pjmedia_sdp_attr *zrtp_hash = NULL;
+
+        zrtp_hash_str->ptr = zrtp_hello_hash;
+        zrtp_hash_str->slen = zrtp_hello_hash_len;
+        zrtp_hash = pjmedia_sdp_attr_create(sdp_pool, "zrtp-hash", zrtp_hash_str);
+        if (zrtp_hash &&
+            pjmedia_sdp_attr_add(&local_sdp->media[media_index]->attr_count,
+                                 local_sdp->media[media_index]->attr,
+                                 zrtp_hash)) {
+          PJ_LOG(4, (THIS_FILE, "attribute added: a=zrtp-hash:%s", zrtp_hello_hash));
+        } else {
+          PJ_LOG(4, (THIS_FILE, "error adding attribute: a=zrtp-hash:%s", zrtp_hello_hash));
+        }
+      }
+    }
+
     /* You may do anything to the local_sdp, e.g. adding new attributes, or
      * even modifying the SDP if you want.
      */
