@@ -362,7 +362,7 @@ typedef struct zrtp_UserCallbacks
      * @see ZrtpQueue#setSignatureData
      *
      */
-    void (*zrtp_signSAS)(void* data, char* sas);
+    void (*zrtp_signSAS)(void* data, uint8_t* sas);
 
     /**
      * ZRTP transport calls this method to request a SAS signature check.
@@ -385,7 +385,7 @@ typedef struct zrtp_UserCallbacks
      *    true if the signature was ok, false otherwise.
      *
      */
-    int32_t (*zrtp_checkSASSignature)(void* data, char* sas);
+    int32_t (*zrtp_checkSASSignature)(void* data, uint8_t* sas);
 
     void* userData;  /*!< Point to some user data, for example to store some context */
 } zrtp_UserCallbacks;

@@ -158,8 +158,8 @@ static void zrtp_synchEnter(ZrtpContext* ctx) ;
 static void zrtp_synchLeave(ZrtpContext* ctx) ;
 static void zrtp_zrtpAskEnrollment(ZrtpContext* ctx, int32_t info) ;
 static void zrtp_zrtpInformEnrollment(ZrtpContext* ctx, int32_t info) ;
-static void zrtp_signSAS(ZrtpContext* ctx, char* sas) ;
-static int32_t zrtp_checkSASSignature(ZrtpContext* ctx, char* sas) ;
+static void zrtp_signSAS(ZrtpContext* ctx, uint8_t* sasHash) ;
+static int32_t zrtp_checkSASSignature(ZrtpContext* ctx, uint8_t* sasHash) ;
 
 /* The callback function structure for ZRTP */
 static zrtp_Callbacks c_callbacks =
@@ -791,23 +791,23 @@ static void zrtp_zrtpInformEnrollment(ZrtpContext* ctx, int32_t info)
     }
 }
 
-static void zrtp_signSAS(ZrtpContext* ctx, char* sas)
+static void zrtp_signSAS(ZrtpContext* ctx, uint8_t* sasHash)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
     if (zrtp->userCallback != NULL)
     {
-        zrtp->userCallback->zrtp_signSAS(zrtp->userCallback->userData, sas);
+        zrtp->userCallback->zrtp_signSAS(zrtp->userCallback->userData, sasHash);
     }
 }
 
-static int32_t zrtp_checkSASSignature(ZrtpContext* ctx, char* sas)
+static int32_t zrtp_checkSASSignature(ZrtpContext* ctx, uint8_t* sasHash)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
     if (zrtp->userCallback != NULL)
     {
-        return zrtp->userCallback->zrtp_checkSASSignature(zrtp->userCallback->userData, sas);
+        return zrtp->userCallback->zrtp_checkSASSignature(zrtp->userCallback->userData, sasHash);
     }
     return 0;
 }
