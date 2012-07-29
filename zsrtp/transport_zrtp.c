@@ -1017,7 +1017,7 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
         // store peer's SSRC in host order, used when creating the CryptoContext
         zrtp->peerSSRC = *(pj_uint32_t*)(buffer + 8);
         zrtp->peerSSRC = pj_ntohl(zrtp->peerSSRC);
-        zrtp_processZrtpMessage(zrtp->zrtpCtx, zrtpMsg, zrtp->peerSSRC);
+        zrtp_processZrtpMessage(zrtp->zrtpCtx, zrtpMsg, zrtp->peerSSRC, size);
     }
 }
 
