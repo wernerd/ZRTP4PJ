@@ -1284,7 +1284,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
         if (zrtp_hash &&
             pjmedia_sdp_attr_add(&local_sdp->media[media_index]->attr_count,
                                  local_sdp->media[media_index]->attr,
-                                 zrtp_hash)) {
+                                 zrtp_hash) == PJ_SUCCESS) {
           PJ_LOG(4, (THIS_FILE, "attribute added: a=zrtp-hash:%s", zrtp_hello_hash));
         } else {
           PJ_LOG(4, (THIS_FILE, "error adding attribute: a=zrtp-hash:%s", zrtp_hello_hash));
