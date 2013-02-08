@@ -327,7 +327,7 @@ static int timer_cancel_entry(pj_timer_entry* entry)
 
 //                                         1
 //                                1234567890123456
-static pj_char_t clientId[] =    "PJS ZRTP 2.1.0  ";
+static pj_char_t clientId[] =    "PJS ZRTP 3.0.0  ";
 
 /*
  * Create the ZRTP transport.

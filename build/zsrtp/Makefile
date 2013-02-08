@@ -46,6 +46,8 @@ twofish = zrtp/cryptcommon/twofish.o \
 	zrtp/cryptcommon/twofish_cfb.o \
 	zrtp/zrtp/crypto/twoCFB.o
 
+common = zrtp/common/osSpecifics.o
+
 # Gcrypt support currently not tested
 #ciphersgcrypt = crypto/gcrypt/gcryptAesSrtp.o crypto/gcrypt/gcrypthmac.o \
 #          crypto/gcrypt/InitializeGcrypt.o
@@ -82,7 +84,7 @@ transportobj = transport_zrtp.o
 cryptobj =  $(ciphersossl) $(skeinmac) $(twofish)
 
 export ZSRTP_SRCDIR = ../../zsrtp
-export ZSRTP_OBJS = $(zrtpobj) $(cryptobj) $(srtpobj) $(transportobj)
+export ZSRTP_OBJS = $(zrtpobj) $(cryptobj) $(srtpobj) $(common) $(transportobj)
 export ZSRTP_CFLAGS = $(_CFLAGS)
 export ZSRTP_CXXFLAGS = $(_CXXFLAGS)
 
