@@ -1259,8 +1259,10 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
                                         unsigned media_index)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
+    int32_t numVersions, i;
+    
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
-
+    
     /* If "rem_sdp" is not NULL, it means we're encoding SDP answer. You may
      * do some more checking on the SDP's once again to make sure that
      * everything is okay before we send SDP.
@@ -1270,26 +1272,27 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
         /* Do checking stuffs here.. */
     }
 
-    {
-      /* Add zrtp-hash attribute to both INVITE and 200 OK. */
-      char *zrtp_hello_hash = zrtp_getHelloHash(zrtp->zrtpCtx);
-      if (zrtp_hello_hash && *zrtp_hello_hash) {
-        int zrtp_hello_hash_len = strlen(zrtp_hello_hash);
-        pj_str_t *zrtp_hash_str = PJ_POOL_ALLOC_T(sdp_pool, pj_str_t);
-        pjmedia_sdp_attr *zrtp_hash = NULL;
+    /* Add zrtp-hash attributes to both INVITE and 200 OK. */
+    numVersions = zrtp_getNumberSupportedVersions(zrtp->zrtpCtx);
+    for (i = 0; i < numVersions; i++) {
+        char *zrtp_hello_hash = zrtp_getHelloHash(zrtp->zrtpCtx, i);
+        if (zrtp_hello_hash && *zrtp_hello_hash) {
+            int zrtp_hello_hash_len = strlen(zrtp_hello_hash);
+            pj_str_t *zrtp_hash_str = PJ_POOL_ALLOC_T(sdp_pool, pj_str_t);
+            pjmedia_sdp_attr *zrtp_hash = NULL;
 
-        zrtp_hash_str->ptr = zrtp_hello_hash;
-        zrtp_hash_str->slen = zrtp_hello_hash_len;
-        zrtp_hash = pjmedia_sdp_attr_create(sdp_pool, "zrtp-hash", zrtp_hash_str);
-        if (zrtp_hash &&
-            pjmedia_sdp_attr_add(&local_sdp->media[media_index]->attr_count,
-                                 local_sdp->media[media_index]->attr,
-                                 zrtp_hash) == PJ_SUCCESS) {
-          PJ_LOG(4, (THIS_FILE, "attribute added: a=zrtp-hash:%s", zrtp_hello_hash));
-        } else {
-          PJ_LOG(4, (THIS_FILE, "error adding attribute: a=zrtp-hash:%s", zrtp_hello_hash));
+            zrtp_hash_str->ptr = zrtp_hello_hash;
+            zrtp_hash_str->slen = zrtp_hello_hash_len;
+
+            zrtp_hash = pjmedia_sdp_attr_create(sdp_pool, "zrtp-hash", zrtp_hash_str);
+            if (zrtp_hash && 
+                pjmedia_sdp_attr_add(&local_sdp->media[media_index]->attr_count, local_sdp->media[media_index]->attr, zrtp_hash) == PJ_SUCCESS) {
+                PJ_LOG(4, (THIS_FILE, "attribute added: a=zrtp-hash:%s", zrtp_hello_hash));
+            }
+            else {
+                PJ_LOG(4, (THIS_FILE, "error adding attribute: a=zrtp-hash:%s", zrtp_hello_hash));
+            }
         }
-      }
     }
 
     /* You may do anything to the local_sdp, e.g. adding new attributes, or
@@ -1313,8 +1316,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
      * information in the SDP. You may choose to call encode_sdp() to slave
      * first before adding your custom attributes if you want.
      */
-    return pjmedia_transport_encode_sdp(zrtp->slave_tp, sdp_pool, local_sdp,
-                                        rem_sdp, media_index);
+    return pjmedia_transport_encode_sdp(zrtp->slave_tp, sdp_pool, local_sdp, rem_sdp, media_index);
 }
 
 /*
