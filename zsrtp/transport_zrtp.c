@@ -944,7 +944,7 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
     if ((*buffer & 0xf0) != 0x10)
     {
         //  Could be real RTP, check if we are in secure mode
-        if (zrtp->srtpReceive == NULL)
+        if (zrtp->srtpReceive == NULL || size < 0)
         {
             zrtp->stream_rtp_cb(zrtp->stream_user_data, pkt, size);
         }
@@ -1033,7 +1033,7 @@ static void transport_rtcp_cb(void *user_data, void *pkt, pj_ssize_t size)
     
     pj_assert(zrtp && zrtp->stream_rtcp_cb);
     
-    if (zrtp->srtcpReceive == NULL)
+    if (zrtp->srtcpReceive == NULL || size < 0)
     {
         zrtp->stream_rtcp_cb(zrtp->stream_user_data, pkt, size);
     }
