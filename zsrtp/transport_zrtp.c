@@ -844,7 +844,10 @@ PJ_DEF(void* )pjmedia_transport_zrtp_getUserData(pjmedia_transport *tp){
 	struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
 	pj_assert(tp);
 
-	return zrtp->userCallback->userData;
+        if (zrtp->userCallback != NULL)
+	    return zrtp->userCallback->userData;
+        else
+            return NULL;
 }
 
 PJ_DEF(void) pjmedia_transport_zrtp_startZrtp(pjmedia_transport *tp)
@@ -960,15 +963,18 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
             }
             else
             {
-                if (rc == -1) {
-                    zrtp->userCallback->zrtp_showMessage(zrtp->userCallback->userData,
-                                                         zrtp_Warning, 
-                                                         zrtp_WarningSRTPauthError);
-                }
-                else {
-                    zrtp->userCallback->zrtp_showMessage(zrtp->userCallback->userData,
-                                                         zrtp_Warning,
-                                                         zrtp_WarningSRTPreplayError);
+                if (zrtp->userCallback != NULL)
+                {
+                    if (rc == -1) {
+                        zrtp->userCallback->zrtp_showMessage(zrtp->userCallback->userData,
+                                                            zrtp_Warning, 
+                                                            zrtp_WarningSRTPauthError);
+                    }
+                    else {
+                        zrtp->userCallback->zrtp_showMessage(zrtp->userCallback->userData,
+                                                            zrtp_Warning,
+                                                            zrtp_WarningSRTPreplayError);
+                    }
                 }
                 zrtp->unprotect_err = rc;
             }
