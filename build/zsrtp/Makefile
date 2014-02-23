@@ -9,7 +9,8 @@ export LIBDIR := ../../lib
 
 RULES_MAK := $(PJDIR)/build/rules.mak
 
-export ZSRTP_LIB := ../../lib/libzsrtp-$(TARGET_NAME)$(LIBEXT)
+# export ZSRTP_LIB := ../../lib/libzsrtp-$(TARGET_NAME)$(LIBEXT)
+export ZSRTP_LIB := libzsrtp-$(TARGET_NAME)$(LIBEXT)
 
 ###############################################################################
 # Gather all flags.
@@ -43,8 +44,11 @@ skeinmac = zrtp/cryptcommon/skein.o zrtp/cryptcommon/skein_block.o zrtp/cryptcom
     zrtp/cryptcommon/macSkein.o
 
 twofish = zrtp/cryptcommon/twofish.o \
-	zrtp/cryptcommon/twofish_cfb.o \
-	zrtp/zrtp/crypto/twoCFB.o
+    zrtp/cryptcommon/twofish_cfb.o \
+    zrtp/zrtp/crypto/twoCFB.o
+
+skeinzrtp = zrtp/zrtp/crypto/skein384.o zrtp/zrtp/crypto/skein256.o \
+    zrtp/zrtp/crypto/skeinMac384.o zrtp/zrtp/crypto/skeinMac256.o
 
 common = zrtp/common/osSpecifics.o
 
@@ -81,7 +85,7 @@ srtpobj = srtp/ZsrtpCWrapper.o zrtp/srtp/CryptoContext.o zrtp/srtp/CryptoContext
 
 transportobj = transport_zrtp.o
 
-cryptobj =  $(ciphersossl) $(skeinmac) $(twofish)
+cryptobj =  $(ciphersossl) $(skeinmac) $(twofish) $(skeinzrtp)
 
 export ZSRTP_SRCDIR = ../../zsrtp
 export ZSRTP_OBJS = $(zrtpobj) $(cryptobj) $(srtpobj) $(common) $(transportobj)
@@ -96,7 +100,7 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 #
 # $(TARGET) is defined in os-$(OS_NAME).mak file in current directory.
 #
-TARGETS := libzsrtp
+TARGETS := $(ZSRTP_LIB)
 
 all: $(TARGETS)
 
@@ -108,14 +112,18 @@ distclean: realclean
 
 .PHONY: dep depend libsrtp clean realclean distclean
 
-libzsrtp:
+$(ZSRTP_LIB):
 	rm -f build.mak
-	$(MAKE) -f $(RULES_MAK) APP=ZSRTP app=libzsrtp $(ZSRTP_LIB)
-	echo 'export PJ_CFLAGS := $(PJ_CFLAGS)' -I`pwd`/../../zsrtp/include >> build.mak
+	$(MAKE) -f $(RULES_MAK) APP=ZSRTP app=libzsrtp $(subst /,$(HOST_PSEP),$(LIBDIR)/$@)
+	echo 'export PJ_CFLAGS := $(PJ_CFLAGS)' -I`pwd`/../../zsrtp/include -I`pwd`/../../zsrtp/zrtp/zrtp >> build.mak
 	echo 'export PJ_LDFLAGS := $(PJ_LDFLAGS)' -L`pwd`/../../lib >> build.mak
 	echo  export PJ_LDLIBS := -lzsrtp-$(TARGET_NAME) $(PJ_LDLIBS) >> build.mak
 
-clean print_lib:
+clean:
+	$(MAKE) -f $(RULES_MAK) APP=ZSRTP app=libzsrtp $@
+	rm -f $(ZSRTP_LIB)
+
+print_lib:
 	$(MAKE) -f $(RULES_MAK) APP=ZSRTP app=libzsrtp $@
 
 realclean:
