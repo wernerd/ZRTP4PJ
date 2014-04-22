@@ -990,6 +990,8 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
     // already handled we delete any packets here after processing.
     if (zrtp->enableZrtp && zrtp->zrtpCtx != NULL)
     {
+        pj_uint32_t magic = *(pj_uint32_t*)(buffer + 4);
+
         // Get CRC value into crc (see above how to compute the offset)
         pj_uint16_t temp = size - CRC_SIZE;
         pj_uint32_t crc = *(uint32_t*)(buffer + temp);
@@ -1001,8 +1003,6 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
                 zrtp->userCallback->zrtp_showMessage(zrtp->userCallback->userData, zrtp_Warning, zrtp_WarningCRCmismatch);
             return;
         }
-
-        pj_uint32_t magic = *(pj_uint32_t*)(buffer + 4);
         magic = pj_ntohl(magic);
 
         // Check if it is really a ZRTP packet, return, no further processing
