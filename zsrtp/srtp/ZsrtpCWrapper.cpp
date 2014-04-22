@@ -23,7 +23,12 @@
 #include <pjmedia/rtp.h>
 #include <pjmedia/errno.h>
 #include <pj/string.h>
+
+#ifdef _MSC_VER
+#include <winsock2.h>
+#else
 #include <arpa/inet.h>
+#endif
 
 ZsrtpContext* zsrtp_CreateWrapper(uint32_t ssrc, int32_t roc,
                                   int64_t  keyDerivRate,
