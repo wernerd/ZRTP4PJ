@@ -133,7 +133,7 @@ struct tp_zrtp
     pj_uint32_t localSSRC;      /* stored in host order */
     pj_char_t* clientIdString;
     pjmedia_transport   *slave_tp;
-    zrtp_UserCallbacks* userCallback;
+    zrtp_UserCallbacks userCallback;
     ZrtpContext* zrtpCtx;
     pj_uint16_t zrtpSeq;
     pj_bool_t enableZrtp;
@@ -500,11 +500,10 @@ static void zrtp_sendInfo(ZrtpContext* ctx, int32_t severity, int32_t subCode)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
-    if (zrtp->userCallback != NULL)
+    if (zrtp->userCallback.zrtp_showMessage != NULL)
     {
-        zrtp->userCallback->zrtp_showMessage(zrtp->userCallback->userData, severity, subCode);
+        zrtp->userCallback.zrtp_showMessage(zrtp->userCallback.userData, severity, subCode);
     }
-
 }
 
 static int32_t zrtp_srtpSecretsReady(ZrtpContext* ctx, C_SrtpSecret_t* secrets, int32_t part)
@@ -712,9 +711,9 @@ static void zrtp_srtpSecretsOff(ZrtpContext* ctx, int32_t part)
         zrtp->srtpReceive = NULL;
         zrtp->srtcpReceive = NULL;
     }
-    if (zrtp->userCallback != NULL)
+    if (zrtp->userCallback.zrtp_secureOff != NULL)
     {
-        zrtp->userCallback->zrtp_secureOff(zrtp->userCallback->userData);
+        zrtp->userCallback.zrtp_secureOff(zrtp->userCallback.userData);
     }
 }
 
@@ -722,41 +721,45 @@ static void zrtp_srtpSecretsOn(ZrtpContext* ctx, char* c, char* s, int32_t verif
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
-    if (zrtp->userCallback != NULL)
+    if (zrtp->userCallback.zrtp_secureOn != NULL)
     {
-        zrtp->userCallback->zrtp_secureOn(zrtp->userCallback->userData, c);
+        zrtp->userCallback.zrtp_secureOn(zrtp->userCallback.userData, c);
 
-        if (strlen(s) > 0)
+        if (zrtp->userCallback.zrtp_showSAS != NULL && strlen(s) > 0)
         {
-            zrtp->userCallback->zrtp_showSAS(zrtp->userCallback->userData, s, verified);
+            zrtp->userCallback.zrtp_showSAS(zrtp->userCallback.userData, s, verified);
         }
     }
 }
 
 static void zrtp_handleGoClear(ZrtpContext* ctx)
 {
+    struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
+
+    if (zrtp->userCallback.zrtp_confirmGoClear != NULL)
+    {
+        zrtp->userCallback.zrtp_confirmGoClear(zrtp->userCallback.userData);
+    }
 }
 
 static void zrtp_zrtpNegotiationFailed(ZrtpContext* ctx, int32_t severity, int32_t subCode)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
-    if (zrtp->userCallback != NULL)
+    if (zrtp->userCallback.zrtp_zrtpNegotiationFailed != NULL)
     {
-        zrtp->userCallback->zrtp_zrtpNegotiationFailed(zrtp->userCallback->userData, severity, subCode);
+        zrtp->userCallback.zrtp_zrtpNegotiationFailed(zrtp->userCallback.userData, severity, subCode);
     }
-
 }
 
 static void zrtp_zrtpNotSuppOther(ZrtpContext* ctx)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
-    if (zrtp->userCallback != NULL)
+    if (zrtp->userCallback.zrtp_zrtpNotSuppOther != NULL)
     {
-        zrtp->userCallback->zrtp_zrtpNotSuppOther(zrtp->userCallback->userData);
+        zrtp->userCallback.zrtp_zrtpNotSuppOther(zrtp->userCallback.userData);
     }
-
 }
 
 static void zrtp_synchEnter(ZrtpContext* ctx)
@@ -775,9 +778,9 @@ static void zrtp_zrtpAskEnrollment(ZrtpContext* ctx, int32_t info)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
-    if (zrtp->userCallback != NULL)
+    if (zrtp->userCallback.zrtp_zrtpAskEnrollment != NULL)
     {
-        zrtp->userCallback->zrtp_zrtpAskEnrollment(zrtp->userCallback->userData, info);
+        zrtp->userCallback.zrtp_zrtpAskEnrollment(zrtp->userCallback.userData, info);
     }
 }
 
@@ -785,9 +788,9 @@ static void zrtp_zrtpInformEnrollment(ZrtpContext* ctx, int32_t info)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
-    if (zrtp->userCallback != NULL)
+    if (zrtp->userCallback.zrtp_zrtpInformEnrollment != NULL)
     {
-        zrtp->userCallback->zrtp_zrtpInformEnrollment(zrtp->userCallback->userData, info);
+        zrtp->userCallback.zrtp_zrtpInformEnrollment(zrtp->userCallback.userData, info);
     }
 }
 
@@ -795,9 +798,9 @@ static void zrtp_signSAS(ZrtpContext* ctx, uint8_t* sasHash)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
-    if (zrtp->userCallback != NULL)
+    if (zrtp->userCallback.zrtp_signSAS != NULL)
     {
-        zrtp->userCallback->zrtp_signSAS(zrtp->userCallback->userData, sasHash);
+        zrtp->userCallback.zrtp_signSAS(zrtp->userCallback.userData, sasHash);
     }
 }
 
@@ -805,9 +808,9 @@ static int32_t zrtp_checkSASSignature(ZrtpContext* ctx, uint8_t* sasHash)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
-    if (zrtp->userCallback != NULL)
+    if (zrtp->userCallback.zrtp_checkSASSignature != NULL)
     {
-        return zrtp->userCallback->zrtp_checkSASSignature(zrtp->userCallback->userData, sasHash);
+        return zrtp->userCallback.zrtp_checkSASSignature(zrtp->userCallback.userData, sasHash);
     }
     return 0;
 }
@@ -829,7 +832,6 @@ PJ_DECL(pj_bool_t) pjmedia_transport_zrtp_isEnableZrtp(pjmedia_transport *tp)
     PJ_ASSERT_RETURN(tp, PJ_FALSE);
 
     return zrtp->enableZrtp;
-
 }
 
 PJ_DEF(void) pjmedia_transport_zrtp_setUserCallback(pjmedia_transport *tp, zrtp_UserCallbacks* ucb)
@@ -837,17 +839,15 @@ PJ_DEF(void) pjmedia_transport_zrtp_setUserCallback(pjmedia_transport *tp, zrtp_
     struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
     pj_assert(tp);
 
-    zrtp->userCallback = ucb;
+    zrtp->userCallback = *ucb;
 }
 
-PJ_DEF(void* )pjmedia_transport_zrtp_getUserData(pjmedia_transport *tp){
-	struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
-	pj_assert(tp);
+PJ_DEF(void* )pjmedia_transport_zrtp_getUserData(pjmedia_transport *tp)
+{
+    struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
+    pj_assert(tp);
 
-        if (zrtp->userCallback != NULL)
-	    return zrtp->userCallback->userData;
-        else
-            return NULL;
+    return zrtp->userCallback.userData;
 }
 
 PJ_DEF(void) pjmedia_transport_zrtp_startZrtp(pjmedia_transport *tp)
@@ -963,15 +963,15 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
             }
             else
             {
-                if (zrtp->userCallback != NULL)
+                if (zrtp->userCallback.zrtp_showMessage != NULL)
                 {
                     if (rc == -1) {
-                        zrtp->userCallback->zrtp_showMessage(zrtp->userCallback->userData,
+                        zrtp->userCallback.zrtp_showMessage(zrtp->userCallback.userData,
                                                             zrtp_Warning, 
                                                             zrtp_WarningSRTPauthError);
                     }
                     else {
-                        zrtp->userCallback->zrtp_showMessage(zrtp->userCallback->userData,
+                        zrtp->userCallback.zrtp_showMessage(zrtp->userCallback.userData,
                                                             zrtp_Warning,
                                                             zrtp_WarningSRTPreplayError);
                     }
@@ -999,8 +999,8 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
 
         if (!zrtp_CheckCksum(buffer, temp, crc))
         {
-            if (zrtp->userCallback != NULL)
-                zrtp->userCallback->zrtp_showMessage(zrtp->userCallback->userData, zrtp_Warning, zrtp_WarningCRCmismatch);
+            if (zrtp->userCallback.zrtp_showMessage != NULL)
+                zrtp->userCallback.zrtp_showMessage(zrtp->userCallback.userData, zrtp_Warning, zrtp_WarningCRCmismatch);
             return;
         }
         magic = pj_ntohl(magic);
@@ -1155,7 +1155,7 @@ static pj_status_t transport_send_rtp(pjmedia_transport *tp,
     }
     else
     {
-        if (size+80 > MAX_RTP_BUFFER_LEN)
+        if (size > MAX_RTP_BUFFER_LEN)
             return PJ_ETOOBIG;
 
         pj_memcpy(zrtp->sendBuffer, pkt, size);
@@ -1190,7 +1190,7 @@ static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
     }
     else
     {
-        if (size+80 > MAX_RTCP_BUFFER_LEN)
+        if (size > MAX_RTCP_BUFFER_LEN)
             return PJ_ETOOBIG;
 
         pj_memcpy(zrtp->sendBufferCtrl, pkt, size);
@@ -1381,6 +1381,7 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
  */
 static pj_status_t transport_destroy(pjmedia_transport *tp)
 {
+    pjmedia_transport *t = NULL;
     struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
 
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
@@ -1391,7 +1392,10 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
     /* close the slave transport in case */
     if (zrtp->close_slave && zrtp->slave_tp)
     {
-        pjmedia_transport_close(zrtp->slave_tp);
+        // Save the slave transport pointer, close later to avoid possible crashes 
+        // if more than one stream is active (audio + video)  and when compiled/built 
+        // with <= VC 2008, reported by Eeri Kask, TU Dresden (Eeri.Kask@mailbox.tu-dresden.de)
+        t = zrtp->slave_tp;
     }
     /* Self destruct.. */
     zrtp_DestroyWrapper(zrtp->zrtpCtx);
@@ -1402,6 +1406,9 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
     pj_mutex_destroy(zrtp->zrtpMutex);
 
     pj_pool_release(zrtp->pool);
+
+    if (t)
+        pjmedia_transport_close(t);
 
     return PJ_SUCCESS;
 }
