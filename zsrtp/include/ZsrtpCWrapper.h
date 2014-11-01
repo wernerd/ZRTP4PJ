@@ -181,7 +181,7 @@ extern "C"
      * @returns
      *     0 if no active SRTP crypto context, 1 if data is encrypted.
      */
-    int32_t zsrtp_protect(ZsrtpContext* ctx, uint8_t* buffer, int32_t length,
+    int32_t zsrtp_protect(ZsrtpContext* ctx, pj_uint8_t* buffer, int32_t length,
                           int32_t* newLength);
 
     /**
@@ -211,7 +211,7 @@ extern "C"
      *     0 if no active SRTP crypto context, 1 if data is decrypted,
      *     -1 if data authentication failed, -2 if SRTP replay check failed
      */
-    int32_t zsrtp_unprotect(ZsrtpContext* ctx, uint8_t* buffer, int32_t length,
+    int32_t zsrtp_unprotect(ZsrtpContext* ctx, pj_uint8_t* buffer, int32_t length,
                             int32_t* newLength);
 
     /**

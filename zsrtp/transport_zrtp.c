@@ -386,7 +386,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_zrtp_create(pjmedia_endpt *endpt,
     zrtp->clientIdString = clientId;    /* Set standard name */
     zrtp->zrtpSeq = 1;                  /* TODO: randomize */
     rc = pj_mutex_create_simple(zrtp->pool, "zrtp", &zrtp->zrtpMutex);
-    zrtp->zrtpBuffer = pj_pool_zalloc(pool, MAX_ZRTP_SIZE);
+    zrtp->zrtpBuffer = ( pj_uint8_t*)pj_pool_zalloc(pool, MAX_ZRTP_SIZE);
     zrtp->sendBuffer = pj_pool_zalloc(pool, MAX_RTP_BUFFER_LEN);
     zrtp->sendBufferCtrl = pj_pool_zalloc(pool, MAX_RTCP_BUFFER_LEN);
 
@@ -922,7 +922,7 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     zrtp_info.active = zrtp_inState(zrtp->zrtpCtx, SecureState) ? PJ_TRUE : PJ_FALSE;
 
     spc_info_idx = info->specific_info_cnt++;
-    info->spc_info[spc_info_idx].type = PJMEDIA_TRANSPORT_TYPE_ZRTP;
+    info->spc_info[spc_info_idx].type = (pjmedia_transport_type)PJMEDIA_TRANSPORT_TYPE_ZRTP;
 
     pj_memcpy(&info->spc_info[spc_info_idx].buffer, &zrtp_info,
               sizeof(zrtp_info));

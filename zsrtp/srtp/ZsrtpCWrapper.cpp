@@ -19,10 +19,10 @@
 
 #include <CryptoContext.h>
 #include <CryptoContextCtrl.h>
-#include <ZsrtpCWrapper.h>
 #include <pjmedia/rtp.h>
 #include <pjmedia/errno.h>
 #include <pj/string.h>
+#include <ZsrtpCWrapper.h>
 
 #ifdef _MSC_VER
 #include <winsock2.h>
