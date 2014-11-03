@@ -125,8 +125,8 @@ struct tp_zrtp
     ZsrtpContext* srtpSend;
     ZsrtpContextCtrl* srtcpReceive;
     ZsrtpContextCtrl* srtcpSend;
-    void* sendBuffer;
-    void* sendBufferCtrl;
+    pj_uint8_t* sendBuffer;
+    pj_uint8_t* sendBufferCtrl;
     pj_uint8_t* zrtpBuffer;
 //    pj_int32_t sendBufferLen;
     pj_uint32_t peerSSRC;       /* stored in host order */
@@ -387,8 +387,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_zrtp_create(pjmedia_endpt *endpt,
     zrtp->zrtpSeq = 1;                  /* TODO: randomize */
     rc = pj_mutex_create_simple(zrtp->pool, "zrtp", &zrtp->zrtpMutex);
     zrtp->zrtpBuffer = ( pj_uint8_t*)pj_pool_zalloc(pool, MAX_ZRTP_SIZE);
-    zrtp->sendBuffer = pj_pool_zalloc(pool, MAX_RTP_BUFFER_LEN);
-    zrtp->sendBufferCtrl = pj_pool_zalloc(pool, MAX_RTCP_BUFFER_LEN);
+    zrtp->sendBuffer = (pj_uint8_t*)pj_pool_zalloc(pool, MAX_RTP_BUFFER_LEN);
+    zrtp->sendBufferCtrl = (pj_uint8_t*)pj_pool_zalloc(pool, MAX_RTCP_BUFFER_LEN);
 
     zrtp->slave_tp = transport;
     zrtp->close_slave = close_slave;
@@ -953,7 +953,7 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
         }
         else
         {
-            rc = zsrtp_unprotect(zrtp->srtpReceive, pkt, size, &newLen);
+            rc = zsrtp_unprotect(zrtp->srtpReceive, (pj_uint8_t*)pkt, size, &newLen);
             if (rc == 1)
             {
                 zrtp->unprotect++;
@@ -990,6 +990,7 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
     // already handled we delete any packets here after processing.
     if (zrtp->enableZrtp && zrtp->zrtpCtx != NULL)
     {
+        unsigned char* zrtpMsg = NULL;
         pj_uint32_t magic = *(pj_uint32_t*)(buffer + 4);
 
         // Get CRC value into crc (see above how to compute the offset)
@@ -1018,7 +1019,7 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
         }
         // this now points beyond the undefined and length field.
         // We need them, thus adjust
-        unsigned char* zrtpMsg = (buffer + 12);
+        zrtpMsg = (buffer + 12);
 
         // store peer's SSRC in host order, used when creating the CryptoContext
         zrtp->peerSSRC = *(pj_uint32_t*)(buffer + 8);
@@ -1045,7 +1046,7 @@ static void transport_rtcp_cb(void *user_data, void *pkt, pj_ssize_t size)
     }
     else
     {
-        rc = zsrtp_unprotectCtrl(zrtp->srtcpReceive, pkt, size, &newLen);
+        rc = zsrtp_unprotectCtrl(zrtp->srtcpReceive, (pj_uint8_t*)pkt, size, &newLen);
 
         if (rc == 1)
         {

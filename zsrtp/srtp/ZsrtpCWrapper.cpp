@@ -105,7 +105,7 @@ static pj_status_t zsrtp_decode_rtp(uint8_t* pkt, int32_t pkt_len,
     return PJ_SUCCESS;
 }
 
-int32_t zsrtp_protect(ZsrtpContext* ctx, uint8_t* buffer, int32_t length,
+int32_t zsrtp_protect(ZsrtpContext* ctx, pj_uint8_t* buffer, int32_t length,
                       int32_t* newLength)
 {
     CryptoContext* pcc = ctx->srtp;
@@ -146,7 +146,7 @@ int32_t zsrtp_protect(ZsrtpContext* ctx, uint8_t* buffer, int32_t length,
     return 1;
 }
 
-int32_t zsrtp_unprotect(ZsrtpContext* ctx, uint8_t* buffer, int32_t length,
+int32_t zsrtp_unprotect(ZsrtpContext* ctx, pj_uint8_t* buffer, int32_t length,
                         int32_t* newLength)
 {
     CryptoContext* pcc = ctx->srtp;
@@ -268,7 +268,7 @@ void zsrtp_DestroyWrapperCtrl (ZsrtpContextCtrl* ctx)
     delete ctx;
 }
 
-int32_t zsrtp_protectCtrl(ZsrtpContextCtrl* ctx, uint8_t* buffer, int32_t length,
+int32_t zsrtp_protectCtrl(ZsrtpContextCtrl* ctx, pj_uint8_t* buffer, int32_t length,
                       int32_t* newLength)
 {
     CryptoContextCtrl* pcc = ctx->srtcp;
@@ -301,7 +301,7 @@ int32_t zsrtp_protectCtrl(ZsrtpContextCtrl* ctx, uint8_t* buffer, int32_t length
     return 1;
 }
 
-int32_t zsrtp_unprotectCtrl(ZsrtpContextCtrl* ctx, uint8_t* buffer, int32_t length,
+int32_t zsrtp_unprotectCtrl(ZsrtpContextCtrl* ctx, pj_uint8_t* buffer, int32_t length,
                             int32_t* newLength)
 {
     CryptoContextCtrl* pcc = ctx->srtcp;
