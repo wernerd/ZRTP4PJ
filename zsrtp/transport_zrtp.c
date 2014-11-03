@@ -914,6 +914,7 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
     pjmedia_zrtp_info zrtp_info;
     int spc_info_idx;
+    int* type = NULL;
 
     PJ_ASSERT_RETURN(tp && info, PJ_EINVAL);
     PJ_ASSERT_RETURN(info->specific_info_cnt <
@@ -922,7 +923,10 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     zrtp_info.active = zrtp_inState(zrtp->zrtpCtx, SecureState) ? PJ_TRUE : PJ_FALSE;
 
     spc_info_idx = info->specific_info_cnt++;
-    info->spc_info[spc_info_idx].type = (pjmedia_transport_type)PJMEDIA_TRANSPORT_TYPE_ZRTP;
+
+    // This is some trick to keep Clang/LLVM quite :-)
+    type = (int*) &info->spc_info[spc_info_idx].type;
+    *type = PJMEDIA_TRANSPORT_TYPE_ZRTP
 
     pj_memcpy(&info->spc_info[spc_info_idx].buffer, &zrtp_info,
               sizeof(zrtp_info));
