@@ -196,11 +196,11 @@ static pj_bool_t timer_running;
 static pj_bool_t timer_initialized = 0;
 static pj_mutex_t* timer_mutex;
 
-static void timer_stop()
-{
-    timer_running = 0;
-    pj_sem_post(timer_sem);
-}
+// static void timer_stop()
+// {
+//     timer_running = 0;
+//     pj_sem_post(timer_sem);
+// }
 
 static int timer_thread_run(void* p)
 {
@@ -926,7 +926,7 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
 
     // This is some trick to keep Clang/LLVM quite :-)
     type = (int*) &info->spc_info[spc_info_idx].type;
-    *type = PJMEDIA_TRANSPORT_TYPE_ZRTP
+    *type = PJMEDIA_TRANSPORT_TYPE_ZRTP;
 
     pj_memcpy(&info->spc_info[spc_info_idx].buffer, &zrtp_info,
               sizeof(zrtp_info));
