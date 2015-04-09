@@ -1,6 +1,6 @@
 # Adapt this path to your pjproject path
 
-export PJDIR := ~/devhome/pjproject.git
+export PJDIR := ~/xPhoneProject/pjproject
 
 include $(PJDIR)/build.mak
 include $(PJDIR)/build/common.mak
@@ -20,6 +20,7 @@ export _CFLAGS 	:= $(CC_INC). $(CC_INC)../../zsrtp/include \
 		   $(CC_INC)../../zsrtp/zrtp/zrtp/libzrtpcpp \
 		   $(CC_INC)../../zsrtp/zrtp/srtp \
 		   $(CC_INC)../../zsrtp/zrtp/srtp/crypto \
+		   $(CC_INC)../../zsrtp/common \
 		   $(CC_INC)$(PJDIR)/pjlib/include \
 		   $(CC_INC)$(PJDIR)/pjlib-util/include \
 		   $(CC_INC)$(PJDIR)/pjmedia/include \
@@ -75,7 +76,8 @@ zrtpobj = zrtp/zrtp/ZrtpCallbackWrapper.o \
     zrtp/zrtp/ZrtpTextData.o \
     zrtp/zrtp/ZrtpConfigure.o \
     zrtp/zrtp/ZrtpCWrapper.o \
-    zrtp/zrtp/Base32.o
+    zrtp/zrtp/Base32.o \
+    zrtp/common/osSpecifics.o
 
 srtpobj = srtp/ZsrtpCWrapper.o zrtp/srtp/CryptoContext.o zrtp/srtp/CryptoContextCtrl.o
 
