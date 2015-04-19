@@ -29,6 +29,10 @@
 
 #define THIS_FILE "transport_zrtp.c"
 
+#define MAX_RTP_BUFFER_LEN	    PJMEDIA_MAX_MTU
+#define MAX_RTCP_BUFFER_LEN	    PJMEDIA_MAX_MTU
+
+
 /* Transport functions prototypes */
 static pj_status_t transport_get_info(pjmedia_transport *tp,
                                       pjmedia_transport_info *info);
