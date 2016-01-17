@@ -27,7 +27,7 @@ export _CFLAGS 	:= $(CC_INC). $(CC_INC)../../zsrtp/include \
 		   $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CFLAGS)  -fno-strict-aliasing
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
-		   $(HOST_CXXFLAGS) $(CXXFLAGS)
+		   $(HOST_CXXFLAGS) $(CXXFLAGS) -std=c++11
 export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
 		   $(LDFLAGS) 
 
