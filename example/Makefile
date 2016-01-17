@@ -18,7 +18,7 @@ CC      = $(PJ_CXX)
 LDFLAGS = $(PJ_LDFLAGS)
 LDLIBS  = $(PJ_LDLIBS)
 CFLAGS  = $(PJ_CFLAGS)
-CPPFLAGS= ${CFLAGS}
+CPPFLAGS= ${CFLAGS} -std=c++11
 
 # If your application is in a file named myapp.cpp or myapp.c
 # this is the line you will need to build the binary.

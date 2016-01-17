@@ -79,7 +79,8 @@ zrtpobj = zrtp/zrtp/ZrtpCallbackWrapper.o \
     zrtp/zrtp/ZrtpTextData.o \
     zrtp/zrtp/ZrtpConfigure.o \
     zrtp/zrtp/ZrtpCWrapper.o \
-    zrtp/zrtp/Base32.o
+    zrtp/zrtp/Base32.o \
+    zrtp/zrtp/EmojiBase32.o
 
 srtpobj = srtp/ZsrtpCWrapper.o zrtp/srtp/CryptoContext.o zrtp/srtp/CryptoContextCtrl.o
 
