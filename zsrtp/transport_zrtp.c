@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- * Copyright (C) 2010 Werner Dittmann
+ * Copyright (C) 2010 - 2016 Werner Dittmann
  * This is the pjmedia ZRTP transport module.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -116,10 +116,8 @@ struct tp_zrtp
     int32_t  unprotect_err;
     int32_t refcount;
     pj_timer_entry timeoutEntry;
-#ifdef DYNAMIC_TIMER
     pj_pool_t* timer_pool;
     pj_timer_heap_t* timer_heap;
-#endif
     pj_mutex_t* zrtpMutex;
     ZsrtpContext* srtpReceive;
     ZsrtpContext* srtpSend;
@@ -184,150 +182,9 @@ static zrtp_Callbacks c_callbacks =
 
 static void timer_callback(pj_timer_heap_t *ht, pj_timer_entry *e);
 
-#ifndef DYNAMIC_TIMER
-/**
- * The static, singleton Timer implementation
- */
-static pj_thread_t* thread_run;
-static pj_pool_t* timer_pool;
-static pj_timer_heap_t* timer;
-static pj_sem_t* timer_sem;
-static pj_bool_t timer_running;
-static pj_bool_t timer_initialized = 0;
-static pj_mutex_t* timer_mutex;
-
-// static void timer_stop()
-// {
-//     timer_running = 0;
-//     pj_sem_post(timer_sem);
-// }
-
-static int timer_thread_run(void* p)
-{
-    pj_time_val tick = {0, 10};
-
-    timer_running = 1;
-
-    while (timer_running)
-    {
-        if (pj_timer_heap_count(timer) == 0)
-        {
-            pj_sem_wait(timer_sem);
-        }
-        else
-        {
-            pj_thread_sleep(PJ_TIME_VAL_MSEC(tick));
-            pj_timer_heap_poll(timer, NULL);
-        }
-    }
-    pj_timer_heap_destroy(timer);
-    timer = NULL;
-    pj_sem_destroy(timer_sem);
-    timer_sem = NULL;
-    pj_pool_release(timer_pool);
-    timer_pool = NULL;
-    timer_initialized = 0;
-    return 0;
-}
-
-static int timer_initialize()
-{
-    pj_status_t rc;
-    pj_mutex_t* temp_mutex;
-
-    rc = pj_mutex_create_simple(timer_pool, "zrtp_timer", &temp_mutex);
-    if (rc != PJ_SUCCESS)
-    {
-        return rc;
-    }
-
-    pj_enter_critical_section();
-    if (timer_mutex == NULL)
-        timer_mutex = temp_mutex;
-    else
-        pj_mutex_destroy(temp_mutex);
-    pj_leave_critical_section();
-
-    pj_mutex_lock(timer_mutex);
-
-    if (timer_initialized)
-    {
-        pj_mutex_unlock(timer_mutex);
-        return PJ_SUCCESS;
-    }
-
-    rc = pj_timer_heap_create(timer_pool, 4, &timer);
-    if (rc != PJ_SUCCESS)
-    {
-        goto ERROR;
-    }
-
-    rc = pj_sem_create(timer_pool, "zrtp_timer", 0, 1, &timer_sem);
-    if (rc != PJ_SUCCESS)
-    {
-        goto ERROR;
-    }
-
-    rc = pj_thread_create(timer_pool, "zrtp_timer", &timer_thread_run, NULL,
-                          PJ_THREAD_DEFAULT_STACK_SIZE, 0, &thread_run);
-    if (rc != PJ_SUCCESS)
-    {
-        goto ERROR;
-    }
-    timer_initialized = 1;
-    pj_mutex_unlock(timer_mutex);
-    return PJ_SUCCESS;
-
-ERROR:
-    if (timer != NULL)
-    {
-        pj_timer_heap_destroy(timer);
-        timer = NULL;
-    }
-    if (timer_sem != NULL)
-    {
-        pj_sem_destroy(timer_sem);
-        timer_sem = NULL;
-    }
-    if (timer_mutex != NULL)
-    {
-        pj_mutex_unlock(timer_mutex);
-        pj_mutex_destroy(timer_mutex);
-        timer_mutex = NULL;
-    }
-
-    return rc;
-}
-
-static int timer_add_entry(pj_timer_entry* entry, pj_time_val* delay)
-{
-    pj_status_t rc;
-
-    if (timer_initialized && timer != NULL)
-    {
-        rc = pj_timer_heap_schedule(timer, entry, delay);
-        pj_sem_post(timer_sem);
-        return rc;
-    }
-    else
-        return PJ_EIGNORED;
-}
-
-static int timer_cancel_entry(pj_timer_entry* entry)
-{
-    if (timer_initialized && timer != NULL)
-        return pj_timer_heap_cancel(timer, entry);
-    else
-        return PJ_EIGNORED;
-}
-/*
- * End of timer implementation
- */
-#endif
-
 //                                         1
 //                                1234567890123456
-static pj_char_t clientId[] =    "PJS ZRTP 3.0.0  ";
+static pj_char_t clientId[] =    "PJS ZRTP 4.6.4  ";
 
 /*
  * Create the ZRTP transport.
@@ -355,19 +212,6 @@ PJ_DEF(pj_status_t) pjmedia_transport_zrtp_create(pjmedia_endpt *endpt,
                       (PJMEDIA_TRANSPORT_TYPE_USER + 2);
     zrtp->base.op = &tp_zrtp_op;
 
-#ifndef DYNAMIC_TIMER
-    if (timer_pool == NULL)
-    {
-        timer_pool = pjmedia_endpt_create_pool(endpt, "zrtp_timer", 256, 256);
-        rc = timer_initialize();
-        if (rc != PJ_SUCCESS)
-        {
-            pj_pool_release(timer_pool);
-            pj_pool_release(zrtp->pool);
-            return rc;
-        }
-    }
-#else
     zrtp->timer_heap = NULL;
     zrtp->timer_pool = pjmedia_endpt_create_pool(endpt, "zrtp_timer", 256, 256);
     rc = pj_timer_heap_create(zrtp->timer_pool, 4, &zrtp->timer_heap);
@@ -377,7 +221,6 @@ PJ_DEF(pj_status_t) pjmedia_transport_zrtp_create(pjmedia_endpt *endpt,
 		pj_pool_release(zrtp->pool);
 		return rc;
 	}
-#endif
 
     /* Create the empty wrapper */
     zrtp->zrtpCtx = zrtp_CreateWrapper();
@@ -470,13 +313,9 @@ static int32_t zrtp_activateTimer(ZrtpContext* ctx, int32_t time)
     timeout.msec = time % 1000;
 
     pj_timer_entry_init(&zrtp->timeoutEntry, 0, zrtp, &timer_callback);
-#ifndef DYNAMIC_TIMER
-    timer_add_entry(&zrtp->timeoutEntry, &timeout);
-#else
     if(zrtp->timer_heap != NULL){
     	pj_timer_heap_schedule(zrtp->timer_heap, &zrtp->timeoutEntry, &timeout);
     }
-#endif
 
     return 1;
 }
@@ -485,13 +324,9 @@ static int32_t zrtp_cancelTimer(ZrtpContext* ctx)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
-#ifndef DYNAMIC_TIMER
-    timer_cancel_entry(&zrtp->timeoutEntry);
-#else
     if(zrtp->timer_heap != NULL){
     	pj_timer_heap_cancel(zrtp->timer_heap, &zrtp->timeoutEntry);
     }
-#endif
 
     return 1;
 }
@@ -998,7 +833,7 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
         pj_uint32_t magic = *(pj_uint32_t*)(buffer + 4);
 
         // Get CRC value into crc (see above how to compute the offset)
-        pj_uint16_t temp = size - CRC_SIZE;
+        pj_uint16_t temp = (pj_uint16_t)(size - CRC_SIZE);
         pj_uint32_t crc = *(uint32_t*)(buffer + temp);
         crc = pj_ntohl(crc);
 
@@ -1409,6 +1244,9 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
     pj_mutex_lock(zrtp->zrtpMutex);
     pj_mutex_unlock(zrtp->zrtpMutex);
     pj_mutex_destroy(zrtp->zrtpMutex);
+
+    pj_timer_heap_destroy(zrtp->timer_heap);
+    pj_pool_release(zrtp->timer_pool);
 
     pj_pool_release(zrtp->pool);
 

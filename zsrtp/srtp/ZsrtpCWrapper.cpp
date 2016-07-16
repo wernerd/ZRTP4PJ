@@ -199,7 +199,7 @@ int32_t zsrtp_unprotect(ZsrtpContext* ctx, pj_uint8_t* buffer, int32_t length,
     /* Guess the index */
     uint64_t guessedIndex = pcc->guessIndex(seqnum);
 
-    uint32_t guessedRoc = guessedIndex >> 16;
+    uint32_t guessedRoc = (uint32_t)(guessedIndex >> 16);
     uint8_t* mac = new uint8_t[pcc->getTagLength()];
 
     pcc->srtpAuthenticate(buffer, length, guessedRoc, mac);

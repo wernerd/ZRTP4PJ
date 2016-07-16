@@ -12,6 +12,10 @@ RULES_MAK := $(PJDIR)/build/rules.mak
 # export ZSRTP_LIB := ../../lib/libzsrtp-$(TARGET_NAME)$(LIBEXT)
 export ZSRTP_LIB := libzsrtp-$(TARGET_NAME)$(LIBEXT)
 
+# Define flags to control ZRTP compilation for PJSIP. PJSIP project usually use 
+# openSSL. Thus set the flag.
+export ZRTP_CFLAGS := -DZRTP_OPENSSL
+
 ###############################################################################
 # Gather all flags.
 #
@@ -25,7 +29,7 @@ export _CFLAGS 	:= $(CC_INC). $(CC_INC)../../zsrtp/include \
 		   $(CC_INC)$(PJDIR)/pjlib-util/include \
 		   $(CC_INC)$(PJDIR)/pjmedia/include \
 		   $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
-		   $(CFLAGS)  -fno-strict-aliasing
+		   $(CFLAGS) $(ZRTP_CFLAGS) -fno-strict-aliasing
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS) -std=c++11
 export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
