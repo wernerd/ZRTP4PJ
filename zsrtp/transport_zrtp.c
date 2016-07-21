@@ -493,7 +493,7 @@ static int32_t zrtp_srtpSecretsReady(ZrtpContext* ctx, C_SrtpSecret_t* secrets, 
                                              authKeyLen,                              // authentication key len
                                              secrets->initSaltLen / 8,                // session salt len
                                              secrets->srtpAuthTagLen / 8);            // authentication tag len
-            
+
             recvCryptoCtrl = zsrtp_CreateWrapperCtrl(zrtp->peerSSRC,
                                                      cipher,                                    // encryption algo
                                                      authn,                                     // authtication algo
@@ -521,7 +521,6 @@ static int32_t zrtp_srtpSecretsReady(ZrtpContext* ctx, C_SrtpSecret_t* secrets, 
         // which is effectively 0.
         zsrtp_deriveSrtpKeys(recvCrypto, 0L);
         zrtp->srtpReceive = recvCrypto;
-        
         zsrtp_deriveSrtpKeysCtrl(recvCryptoCtrl);
         zrtp->srtcpReceive = recvCryptoCtrl;
     }
@@ -700,6 +699,9 @@ PJ_DEF(void) pjmedia_transport_zrtp_stopZrtp(pjmedia_transport *tp)
     struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
 
     pj_assert(tp && zrtp->zrtpCtx);
+
+    pj_timer_heap_destroy(zrtp->timer_heap);
+    pj_pool_release(zrtp->timer_pool);
 
     zrtp_stopZrtpEngine(zrtp->zrtpCtx);
     zrtp_DestroyWrapper(zrtp->zrtpCtx);
@@ -1194,9 +1196,12 @@ static pj_status_t transport_media_stop(pjmedia_transport *tp)
     struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
 
-    /* Do something.. */
-    PJ_LOG(4, (THIS_FILE, "Media stop - encrypted packets: %ld, decrypted packets: %ld",
-               zrtp->protect, zrtp->unprotect));
+    // PJ_LOG with two parameters seems to have a problem, reported by Narkus von Arc, Atos CH
+    // PJ_LOG(4, (THIS_FILE, "Media stop - encrypted packets: %ld, decrypted packets: %ld",
+    //        zrtp->protect, zrtp->unprotect));
+
+    PJ_LOG(4, (THIS_FILE, "Destroy  - encrypted packets: %ld", zrtp->protect));
+    PJ_LOG(4, (THIS_FILE, "Destroy  - decrypted packets: %ld", zrtp->unprotect));
 
     /* And pass the call to the slave transport */
     return pjmedia_transport_media_stop(zrtp->slave_tp);
@@ -1226,8 +1231,12 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
 
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
 
-    PJ_LOG(4, (THIS_FILE, "Destroy - encrypted packets: %ld, decrypted packets: %ld",
-               zrtp->protect, zrtp->unprotect));
+    // PJ_LOG with two parameters seems to have a problem, reported by Markus von Arc, Atos CH
+    // PJ_LOG(4, (THIS_FILE, "Destroy - encrypted packets: %ld, decrypted packets: %ld",
+    //            zrtp->protect, zrtp->unprotect));
+
+    PJ_LOG(4, (THIS_FILE, "Destroy  - encrypted packets: %ld", zrtp->protect));
+    PJ_LOG(4, (THIS_FILE, "Destroy  - decrypted packets: %ld", zrtp->unprotect));
 
     /* close the slave transport in case */
     if (zrtp->close_slave && zrtp->slave_tp)
