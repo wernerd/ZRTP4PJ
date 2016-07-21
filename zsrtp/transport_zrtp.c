@@ -700,12 +700,23 @@ PJ_DEF(void) pjmedia_transport_zrtp_stopZrtp(pjmedia_transport *tp)
 
     pj_assert(tp && zrtp->zrtpCtx);
 
+    zrtp_stopZrtpEngine(zrtp->zrtpCtx);
+    zrtp_DestroyWrapper(zrtp->zrtpCtx);
+
+    /* In case mutex is being acquired by other thread */
+    pj_mutex_lock(zrtp->zrtpMutex);
+    pj_mutex_unlock(zrtp->zrtpMutex);
+    pj_mutex_destroy(zrtp->zrtpMutex);
+
     pj_timer_heap_destroy(zrtp->timer_heap);
     pj_pool_release(zrtp->timer_pool);
 
-    zrtp_stopZrtpEngine(zrtp->zrtpCtx);
-    zrtp_DestroyWrapper(zrtp->zrtpCtx);
+    pj_pool_release(zrtp->pool);
+
+    zrtp->timer_pool = NULL;
+    zrtp->pool = NULL;
     zrtp->zrtpCtx = NULL;
+    zrtp->zrtpMutex = NULL;
     zrtp->started = 0;
 }
 
@@ -1249,15 +1260,23 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
     /* Self destruct.. */
     zrtp_DestroyWrapper(zrtp->zrtpCtx);
 
-    /* In case mutex is being acquired by other thread */
-    pj_mutex_lock(zrtp->zrtpMutex);
-    pj_mutex_unlock(zrtp->zrtpMutex);
-    pj_mutex_destroy(zrtp->zrtpMutex);
+    if (zrtp->zrtpMutex != NULL) {
+        /* In case mutex is being acquired by other thread */
+        pj_mutex_lock(zrtp->zrtpMutex);
+        pj_mutex_unlock(zrtp->zrtpMutex);
+        pj_mutex_destroy(zrtp->zrtpMutex);
+    }
 
-    pj_timer_heap_destroy(zrtp->timer_heap);
-    pj_pool_release(zrtp->timer_pool);
+    if (zrtp->timer_pool != NULL) {
+        pj_timer_heap_destroy(zrtp->timer_heap);
+        pj_pool_release(zrtp->timer_pool);
+    }
 
-    pj_pool_release(zrtp->pool);
+    if (zrtp->pool != NULL)
+        pj_pool_release(zrtp->pool);
+
+    zrtp->timer_pool = NULL;
+    zrtp->pool = NULL;
 
     if (t)
         pjmedia_transport_close(t);
