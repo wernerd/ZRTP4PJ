@@ -224,6 +224,8 @@ static int timer_thread_run(void* p)
             pj_timer_heap_poll(timer, NULL);
         }
     }
+    pj_mutex_destroy(timer_mutex);
+    timer_mutex = NULL;
     pj_timer_heap_destroy(timer);
     timer = NULL;
     pj_sem_destroy(timer_sem);
