@@ -165,8 +165,9 @@
  *
  */
 
-#define MAX_RTP_BUFFER_LEN  1024
-#define MAX_RTCP_BUFFER_LEN  1300
+// -30 accounts for required SRTP authentication and possible masquearding extension
+#define MAX_RTP_BUFFER_LEN   (PJMEDIA_MAX_MTU-30)
+#define MAX_RTCP_BUFFER_LEN  (PJMEDIA_MAX_MTU-30)
 
 #define PJMEDIA_TRANSPORT_TYPE_ZRTP PJMEDIA_TRANSPORT_TYPE_USER+2
 

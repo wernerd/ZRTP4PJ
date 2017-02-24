@@ -48,8 +48,10 @@
 #ifdef __cplusplus
 extern "C"
 {
-#endif
+    typedef class CryptoContext CryptoContext;
+#else
     typedef struct CryptoContext CryptoContext;
+#endif
 
     typedef struct zsrtpContext
     {
@@ -181,7 +183,7 @@ extern "C"
      * @returns
      *     0 if no active SRTP crypto context, 1 if data is encrypted.
      */
-    int32_t zsrtp_protect(ZsrtpContext* ctx, uint8_t* buffer, int32_t length,
+    int32_t zsrtp_protect(ZsrtpContext* ctx, pj_uint8_t* buffer, int32_t length,
                           int32_t* newLength);
 
     /**
@@ -211,7 +213,7 @@ extern "C"
      *     0 if no active SRTP crypto context, 1 if data is decrypted,
      *     -1 if data authentication failed, -2 if SRTP replay check failed
      */
-    int32_t zsrtp_unprotect(ZsrtpContext* ctx, uint8_t* buffer, int32_t length,
+    int32_t zsrtp_unprotect(ZsrtpContext* ctx, pj_uint8_t* buffer, int32_t length,
                             int32_t* newLength);
 
     /**
@@ -253,8 +255,11 @@ extern "C"
      */                                    
     void zsrtp_deriveSrtpKeys(ZsrtpContext* ctx, uint64_t index);
 
-
+#ifdef __cplusplus
+    typedef class CryptoContextCtrl CryptoContextCtrl;
+#else
     typedef struct CryptoContextCtrl CryptoContextCtrl;
+#endif
 
     typedef struct zsrtcpContext
     {
@@ -374,7 +379,7 @@ extern "C"
      * @returns
      *     0 if no active SRTCP crypto context, 1 if data is encrypted.
      */
-    int32_t zsrtp_protectCtrl(ZsrtpContextCtrl* ctx, uint8_t* buffer, int32_t length,
+    int32_t zsrtp_protectCtrl(ZsrtpContextCtrl* ctx, pj_uint8_t* buffer, int32_t length,
                           int32_t* newLength);
 
     /**
@@ -404,7 +409,7 @@ extern "C"
      *     0 if no active SRTCP crypto context, 1 if data is decrypted,
      *     -1 if data authentication failed, -2 if SRTCP replay check failed
      */
-    int32_t zsrtp_unprotectCtrl(ZsrtpContextCtrl* ctx, uint8_t* buffer, int32_t length,
+    int32_t zsrtp_unprotectCtrl(ZsrtpContextCtrl* ctx, pj_uint8_t* buffer, int32_t length,
                             int32_t* newLength);
 
     /**

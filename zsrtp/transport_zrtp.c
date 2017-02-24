@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- * Copyright (C) 2010 Werner Dittmann
+ * Copyright (C) 2010 - 2016 Werner Dittmann
  * This is the pjmedia ZRTP transport module.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -125,15 +125,15 @@ struct tp_zrtp
     ZsrtpContext* srtpSend;
     ZsrtpContextCtrl* srtcpReceive;
     ZsrtpContextCtrl* srtcpSend;
-    void* sendBuffer;
-    void* sendBufferCtrl;
+    pj_uint8_t* sendBuffer;
+    pj_uint8_t* sendBufferCtrl;
     pj_uint8_t* zrtpBuffer;
 //    pj_int32_t sendBufferLen;
     pj_uint32_t peerSSRC;       /* stored in host order */
     pj_uint32_t localSSRC;      /* stored in host order */
     pj_char_t* clientIdString;
     pjmedia_transport   *slave_tp;
-    zrtp_UserCallbacks* userCallback;
+    zrtp_UserCallbacks userCallback;
     ZrtpContext* zrtpCtx;
     pj_uint16_t zrtpSeq;
     pj_bool_t enableZrtp;
@@ -200,6 +200,10 @@ static void timer_stop()
 {
     timer_running = 0;
     pj_sem_post(timer_sem);
+
+    if (pj_thread_join(thread_run) != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "Joining timer thread failed."));
+    }
 }
 
 static int timer_thread_run(void* p)
@@ -220,6 +224,8 @@ static int timer_thread_run(void* p)
             pj_timer_heap_poll(timer, NULL);
         }
     }
+    pj_mutex_destroy(timer_mutex);
+    timer_mutex = NULL;
     pj_timer_heap_destroy(timer);
     timer = NULL;
     pj_sem_destroy(timer_sem);
@@ -278,7 +284,7 @@ static int timer_initialize()
     pj_mutex_unlock(timer_mutex);
     return PJ_SUCCESS;
 
-ERROR:
+    ERROR:
     if (timer != NULL)
     {
         pj_timer_heap_destroy(timer);
@@ -325,9 +331,10 @@ static int timer_cancel_entry(pj_timer_entry* entry)
  */
 #endif
 
+
 //                                         1
 //                                1234567890123456
-static pj_char_t clientId[] =    "PJS ZRTP 3.0.0  ";
+static pj_char_t clientId[] =    "PJS ZRTP 4.6.4  ";
 
 /*
  * Create the ZRTP transport.
@@ -386,9 +393,9 @@ PJ_DEF(pj_status_t) pjmedia_transport_zrtp_create(pjmedia_endpt *endpt,
     zrtp->clientIdString = clientId;    /* Set standard name */
     zrtp->zrtpSeq = 1;                  /* TODO: randomize */
     rc = pj_mutex_create_simple(zrtp->pool, "zrtp", &zrtp->zrtpMutex);
-    zrtp->zrtpBuffer = pj_pool_zalloc(pool, MAX_ZRTP_SIZE);
-    zrtp->sendBuffer = pj_pool_zalloc(pool, MAX_RTP_BUFFER_LEN);
-    zrtp->sendBufferCtrl = pj_pool_zalloc(pool, MAX_RTCP_BUFFER_LEN);
+    zrtp->zrtpBuffer = ( pj_uint8_t*)pj_pool_zalloc(pool, MAX_ZRTP_SIZE);
+    zrtp->sendBuffer = (pj_uint8_t*)pj_pool_zalloc(pool, MAX_RTP_BUFFER_LEN);
+    zrtp->sendBufferCtrl = (pj_uint8_t*)pj_pool_zalloc(pool, MAX_RTCP_BUFFER_LEN);
 
     zrtp->slave_tp = transport;
     zrtp->close_slave = close_slave;
@@ -485,14 +492,13 @@ static int32_t zrtp_cancelTimer(ZrtpContext* ctx)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
-#ifndef DYNAMIC_TIMER
+    #ifndef DYNAMIC_TIMER
     timer_cancel_entry(&zrtp->timeoutEntry);
 #else
     if(zrtp->timer_heap != NULL){
     	pj_timer_heap_cancel(zrtp->timer_heap, &zrtp->timeoutEntry);
     }
 #endif
-
     return 1;
 }
 
@@ -500,11 +506,10 @@ static void zrtp_sendInfo(ZrtpContext* ctx, int32_t severity, int32_t subCode)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
-    if (zrtp->userCallback != NULL)
+    if (zrtp->userCallback.zrtp_showMessage != NULL)
     {
-        zrtp->userCallback->zrtp_showMessage(zrtp->userCallback->userData, severity, subCode);
+        zrtp->userCallback.zrtp_showMessage(zrtp->userCallback.userData, severity, subCode);
     }
-
 }
 
 static int32_t zrtp_srtpSecretsReady(ZrtpContext* ctx, C_SrtpSecret_t* secrets, int32_t part)
@@ -659,7 +664,7 @@ static int32_t zrtp_srtpSecretsReady(ZrtpContext* ctx, C_SrtpSecret_t* secrets, 
                                              authKeyLen,                              // authentication key len
                                              secrets->initSaltLen / 8,                // session salt len
                                              secrets->srtpAuthTagLen / 8);            // authentication tag len
-            
+
             recvCryptoCtrl = zsrtp_CreateWrapperCtrl(zrtp->peerSSRC,
                                                      cipher,                                    // encryption algo
                                                      authn,                                     // authtication algo
@@ -687,7 +692,6 @@ static int32_t zrtp_srtpSecretsReady(ZrtpContext* ctx, C_SrtpSecret_t* secrets, 
         // which is effectively 0.
         zsrtp_deriveSrtpKeys(recvCrypto, 0L);
         zrtp->srtpReceive = recvCrypto;
-        
         zsrtp_deriveSrtpKeysCtrl(recvCryptoCtrl);
         zrtp->srtcpReceive = recvCryptoCtrl;
     }
@@ -712,9 +716,9 @@ static void zrtp_srtpSecretsOff(ZrtpContext* ctx, int32_t part)
         zrtp->srtpReceive = NULL;
         zrtp->srtcpReceive = NULL;
     }
-    if (zrtp->userCallback != NULL)
+    if (zrtp->userCallback.zrtp_secureOff != NULL)
     {
-        zrtp->userCallback->zrtp_secureOff(zrtp->userCallback->userData);
+        zrtp->userCallback.zrtp_secureOff(zrtp->userCallback.userData);
     }
 }
 
@@ -722,41 +726,45 @@ static void zrtp_srtpSecretsOn(ZrtpContext* ctx, char* c, char* s, int32_t verif
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
-    if (zrtp->userCallback != NULL)
+    if (zrtp->userCallback.zrtp_secureOn != NULL)
     {
-        zrtp->userCallback->zrtp_secureOn(zrtp->userCallback->userData, c);
+        zrtp->userCallback.zrtp_secureOn(zrtp->userCallback.userData, c);
 
-        if (strlen(s) > 0)
+        if (zrtp->userCallback.zrtp_showSAS != NULL && strlen(s) > 0)
         {
-            zrtp->userCallback->zrtp_showSAS(zrtp->userCallback->userData, s, verified);
+            zrtp->userCallback.zrtp_showSAS(zrtp->userCallback.userData, s, verified);
         }
     }
 }
 
 static void zrtp_handleGoClear(ZrtpContext* ctx)
 {
+    struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
+
+    if (zrtp->userCallback.zrtp_confirmGoClear != NULL)
+    {
+        zrtp->userCallback.zrtp_confirmGoClear(zrtp->userCallback.userData);
+    }
 }
 
 static void zrtp_zrtpNegotiationFailed(ZrtpContext* ctx, int32_t severity, int32_t subCode)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
-    if (zrtp->userCallback != NULL)
+    if (zrtp->userCallback.zrtp_zrtpNegotiationFailed != NULL)
     {
-        zrtp->userCallback->zrtp_zrtpNegotiationFailed(zrtp->userCallback->userData, severity, subCode);
+        zrtp->userCallback.zrtp_zrtpNegotiationFailed(zrtp->userCallback.userData, severity, subCode);
     }
-
 }
 
 static void zrtp_zrtpNotSuppOther(ZrtpContext* ctx)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
-    if (zrtp->userCallback != NULL)
+    if (zrtp->userCallback.zrtp_zrtpNotSuppOther != NULL)
     {
-        zrtp->userCallback->zrtp_zrtpNotSuppOther(zrtp->userCallback->userData);
+        zrtp->userCallback.zrtp_zrtpNotSuppOther(zrtp->userCallback.userData);
     }
-
 }
 
 static void zrtp_synchEnter(ZrtpContext* ctx)
@@ -775,9 +783,9 @@ static void zrtp_zrtpAskEnrollment(ZrtpContext* ctx, int32_t info)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
-    if (zrtp->userCallback != NULL)
+    if (zrtp->userCallback.zrtp_zrtpAskEnrollment != NULL)
     {
-        zrtp->userCallback->zrtp_zrtpAskEnrollment(zrtp->userCallback->userData, info);
+        zrtp->userCallback.zrtp_zrtpAskEnrollment(zrtp->userCallback.userData, info);
     }
 }
 
@@ -785,9 +793,9 @@ static void zrtp_zrtpInformEnrollment(ZrtpContext* ctx, int32_t info)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
-    if (zrtp->userCallback != NULL)
+    if (zrtp->userCallback.zrtp_zrtpInformEnrollment != NULL)
     {
-        zrtp->userCallback->zrtp_zrtpInformEnrollment(zrtp->userCallback->userData, info);
+        zrtp->userCallback.zrtp_zrtpInformEnrollment(zrtp->userCallback.userData, info);
     }
 }
 
@@ -795,9 +803,9 @@ static void zrtp_signSAS(ZrtpContext* ctx, uint8_t* sasHash)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
-    if (zrtp->userCallback != NULL)
+    if (zrtp->userCallback.zrtp_signSAS != NULL)
     {
-        zrtp->userCallback->zrtp_signSAS(zrtp->userCallback->userData, sasHash);
+        zrtp->userCallback.zrtp_signSAS(zrtp->userCallback.userData, sasHash);
     }
 }
 
@@ -805,9 +813,9 @@ static int32_t zrtp_checkSASSignature(ZrtpContext* ctx, uint8_t* sasHash)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)ctx->userData;
 
-    if (zrtp->userCallback != NULL)
+    if (zrtp->userCallback.zrtp_checkSASSignature != NULL)
     {
-        return zrtp->userCallback->zrtp_checkSASSignature(zrtp->userCallback->userData, sasHash);
+        return zrtp->userCallback.zrtp_checkSASSignature(zrtp->userCallback.userData, sasHash);
     }
     return 0;
 }
@@ -829,7 +837,6 @@ PJ_DECL(pj_bool_t) pjmedia_transport_zrtp_isEnableZrtp(pjmedia_transport *tp)
     PJ_ASSERT_RETURN(tp, PJ_FALSE);
 
     return zrtp->enableZrtp;
-
 }
 
 PJ_DEF(void) pjmedia_transport_zrtp_setUserCallback(pjmedia_transport *tp, zrtp_UserCallbacks* ucb)
@@ -837,17 +844,15 @@ PJ_DEF(void) pjmedia_transport_zrtp_setUserCallback(pjmedia_transport *tp, zrtp_
     struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
     pj_assert(tp);
 
-    zrtp->userCallback = ucb;
+    zrtp->userCallback = *ucb;
 }
 
-PJ_DEF(void* )pjmedia_transport_zrtp_getUserData(pjmedia_transport *tp){
-	struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
-	pj_assert(tp);
+PJ_DEF(void* )pjmedia_transport_zrtp_getUserData(pjmedia_transport *tp)
+{
+    struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
+    pj_assert(tp);
 
-        if (zrtp->userCallback != NULL)
-	    return zrtp->userCallback->userData;
-        else
-            return NULL;
+    return zrtp->userCallback.userData;
 }
 
 PJ_DEF(void) pjmedia_transport_zrtp_startZrtp(pjmedia_transport *tp)
@@ -868,7 +873,26 @@ PJ_DEF(void) pjmedia_transport_zrtp_stopZrtp(pjmedia_transport *tp)
 
     zrtp_stopZrtpEngine(zrtp->zrtpCtx);
     zrtp_DestroyWrapper(zrtp->zrtpCtx);
+
+    /* In case mutex is being acquired by other thread */
+    pj_mutex_lock(zrtp->zrtpMutex);
+    pj_mutex_unlock(zrtp->zrtpMutex);
+    pj_mutex_destroy(zrtp->zrtpMutex);
+
+#ifdef DYNAMIC_TIMER
+    pj_timer_heap_destroy(zrtp->timer_heap);
+    pj_pool_release(zrtp->timer_pool);
+#else
+    timer_stop();
+#endif
+    pj_pool_release(zrtp->pool);
+
+#ifdef DYNAMIC_TIMER
+    zrtp->timer_pool = NULL;
+#endif
+    zrtp->pool = NULL;
     zrtp->zrtpCtx = NULL;
+    zrtp->zrtpMutex = NULL;
     zrtp->started = 0;
 }
 
@@ -914,6 +938,7 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
     pjmedia_zrtp_info zrtp_info;
     int spc_info_idx;
+    int* type = NULL;
 
     PJ_ASSERT_RETURN(tp && info, PJ_EINVAL);
     PJ_ASSERT_RETURN(info->specific_info_cnt <
@@ -922,7 +947,10 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     zrtp_info.active = zrtp_inState(zrtp->zrtpCtx, SecureState) ? PJ_TRUE : PJ_FALSE;
 
     spc_info_idx = info->specific_info_cnt++;
-    info->spc_info[spc_info_idx].type = PJMEDIA_TRANSPORT_TYPE_ZRTP;
+
+    // This is some trick to keep Clang/LLVM quite :-)
+    type = (int*) &info->spc_info[spc_info_idx].type;
+    *type = PJMEDIA_TRANSPORT_TYPE_ZRTP;
 
     pj_memcpy(&info->spc_info[spc_info_idx].buffer, &zrtp_info,
               sizeof(zrtp_info));
@@ -953,7 +981,7 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
         }
         else
         {
-            rc = zsrtp_unprotect(zrtp->srtpReceive, pkt, size, &newLen);
+            rc = zsrtp_unprotect(zrtp->srtpReceive, (pj_uint8_t*)pkt, size, &newLen);
             if (rc == 1)
             {
                 zrtp->unprotect++;
@@ -963,15 +991,15 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
             }
             else
             {
-                if (zrtp->userCallback != NULL)
+                if (zrtp->userCallback.zrtp_showMessage != NULL)
                 {
                     if (rc == -1) {
-                        zrtp->userCallback->zrtp_showMessage(zrtp->userCallback->userData,
+                        zrtp->userCallback.zrtp_showMessage(zrtp->userCallback.userData,
                                                             zrtp_Warning, 
                                                             zrtp_WarningSRTPauthError);
                     }
                     else {
-                        zrtp->userCallback->zrtp_showMessage(zrtp->userCallback->userData,
+                        zrtp->userCallback.zrtp_showMessage(zrtp->userCallback.userData,
                                                             zrtp_Warning,
                                                             zrtp_WarningSRTPreplayError);
                     }
@@ -990,19 +1018,20 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
     // already handled we delete any packets here after processing.
     if (zrtp->enableZrtp && zrtp->zrtpCtx != NULL)
     {
+        unsigned char* zrtpMsg = NULL;
+        pj_uint32_t magic = *(pj_uint32_t*)(buffer + 4);
+
         // Get CRC value into crc (see above how to compute the offset)
-        pj_uint16_t temp = size - CRC_SIZE;
+        pj_uint16_t temp = (pj_uint16_t)(size - CRC_SIZE);
         pj_uint32_t crc = *(uint32_t*)(buffer + temp);
         crc = pj_ntohl(crc);
 
         if (!zrtp_CheckCksum(buffer, temp, crc))
         {
-            if (zrtp->userCallback != NULL)
-                zrtp->userCallback->zrtp_showMessage(zrtp->userCallback->userData, zrtp_Warning, zrtp_WarningCRCmismatch);
+            if (zrtp->userCallback.zrtp_showMessage != NULL)
+                zrtp->userCallback.zrtp_showMessage(zrtp->userCallback.userData, zrtp_Warning, zrtp_WarningCRCmismatch);
             return;
         }
-
-        pj_uint32_t magic = *(pj_uint32_t*)(buffer + 4);
         magic = pj_ntohl(magic);
 
         // Check if it is really a ZRTP packet, return, no further processing
@@ -1018,7 +1047,7 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
         }
         // this now points beyond the undefined and length field.
         // We need them, thus adjust
-        unsigned char* zrtpMsg = (buffer + 12);
+        zrtpMsg = (buffer + 12);
 
         // store peer's SSRC in host order, used when creating the CryptoContext
         zrtp->peerSSRC = *(pj_uint32_t*)(buffer + 8);
@@ -1045,7 +1074,7 @@ static void transport_rtcp_cb(void *user_data, void *pkt, pj_ssize_t size)
     }
     else
     {
-        rc = zsrtp_unprotectCtrl(zrtp->srtcpReceive, pkt, size, &newLen);
+        rc = zsrtp_unprotectCtrl(zrtp->srtcpReceive, (pj_uint8_t*)pkt, size, &newLen);
 
         if (rc == 1)
         {
@@ -1155,7 +1184,7 @@ static pj_status_t transport_send_rtp(pjmedia_transport *tp,
     }
     else
     {
-        if (size+80 > MAX_RTP_BUFFER_LEN)
+        if (size > MAX_RTP_BUFFER_LEN)
             return PJ_ETOOBIG;
 
         pj_memcpy(zrtp->sendBuffer, pkt, size);
@@ -1190,7 +1219,7 @@ static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
     }
     else
     {
-        if (size+80 > MAX_RTCP_BUFFER_LEN)
+        if (size > MAX_RTCP_BUFFER_LEN)
             return PJ_ETOOBIG;
 
         pj_memcpy(zrtp->sendBufferCtrl, pkt, size);
@@ -1354,9 +1383,12 @@ static pj_status_t transport_media_stop(pjmedia_transport *tp)
     struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
 
-    /* Do something.. */
-    PJ_LOG(4, (THIS_FILE, "Media stop - encrypted packets: %ld, decrypted packets: %ld",
-               zrtp->protect, zrtp->unprotect));
+    // PJ_LOG with two parameters seems to have a problem, reported by Narkus von Arc, Atos CH
+    // PJ_LOG(4, (THIS_FILE, "Media stop - encrypted packets: %ld, decrypted packets: %ld",
+    //        zrtp->protect, zrtp->unprotect));
+
+    PJ_LOG(4, (THIS_FILE, "Destroy  - encrypted packets: %ld", zrtp->protect));
+    PJ_LOG(4, (THIS_FILE, "Destroy  - decrypted packets: %ld", zrtp->unprotect));
 
     /* And pass the call to the slave transport */
     return pjmedia_transport_media_stop(zrtp->slave_tp);
@@ -1381,31 +1413,53 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
  */
 static pj_status_t transport_destroy(pjmedia_transport *tp)
 {
+    pjmedia_transport *t = NULL;
     struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
 
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
 
-    PJ_LOG(4, (THIS_FILE, "Destroy - encrypted packets: %ld, decrypted packets: %ld",
-               zrtp->protect, zrtp->unprotect));
+    // PJ_LOG with two parameters seems to have a problem, reported by Markus von Arc, Atos CH
+    // PJ_LOG(4, (THIS_FILE, "Destroy - encrypted packets: %ld, decrypted packets: %ld",
+    //            zrtp->protect, zrtp->unprotect));
+
+    PJ_LOG(4, (THIS_FILE, "Destroy  - encrypted packets: %ld", zrtp->protect));
+    PJ_LOG(4, (THIS_FILE, "Destroy  - decrypted packets: %ld", zrtp->unprotect));
 
     /* close the slave transport in case */
     if (zrtp->close_slave && zrtp->slave_tp)
     {
-        pjmedia_transport_close(zrtp->slave_tp);
+        // Save the slave transport pointer, close later to avoid possible crashes 
+        // if more than one stream is active (audio + video)  and when compiled/built 
+        // with <= VC 2008, reported by Eeri Kask, TU Dresden (Eeri.Kask@mailbox.tu-dresden.de)
+        t = zrtp->slave_tp;
     }
     /* Self destruct.. */
     zrtp_DestroyWrapper(zrtp->zrtpCtx);
 
-    /* In case mutex is being acquired by other thread */
-    pj_mutex_lock(zrtp->zrtpMutex);
-    pj_mutex_unlock(zrtp->zrtpMutex);
-    pj_mutex_destroy(zrtp->zrtpMutex);
+    if (zrtp->zrtpMutex != NULL) {
+        /* In case mutex is being acquired by other thread */
+        pj_mutex_lock(zrtp->zrtpMutex);
+        pj_mutex_unlock(zrtp->zrtpMutex);
+        pj_mutex_destroy(zrtp->zrtpMutex);
+    }
+#ifdef DYNAMIC_TIMER
+    if (zrtp->timer_pool != NULL) {
+        pj_timer_heap_destroy(zrtp->timer_heap);
+        pj_pool_release(zrtp->timer_pool);
+    }
+#else
+    timer_stop();
+#endif
+    if (zrtp->pool != NULL)
+        pj_pool_release(zrtp->pool);
 
-    pj_pool_release(zrtp->pool);
+#ifdef DYNAMIC_TIMER
+    zrtp->timer_pool = NULL;
+#endif
+    zrtp->pool = NULL;
+
+    if (t)
+        pjmedia_transport_close(t);
 
     return PJ_SUCCESS;
 }
-
-
-
-

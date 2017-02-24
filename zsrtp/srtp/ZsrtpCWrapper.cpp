@@ -19,15 +19,15 @@
 
 #include <CryptoContext.h>
 #include <CryptoContextCtrl.h>
-#include <ZsrtpCWrapper.h>
 #include <pjmedia/rtp.h>
 #include <pjmedia/errno.h>
 #include <pj/string.h>
+#include <ZsrtpCWrapper.h>
 
-#if defined(_WIN32) || defined(_WIN64)
-# include <winsock2.h>
+#ifdef _MSC_VER
+#include <winsock2.h>
 #else
-# include <arpa/inet.h>
+#include <arpa/inet.h>
 #endif
 
 
@@ -106,7 +106,7 @@ static pj_status_t zsrtp_decode_rtp(uint8_t* pkt, int32_t pkt_len,
     return PJ_SUCCESS;
 }
 
-int32_t zsrtp_protect(ZsrtpContext* ctx, uint8_t* buffer, int32_t length,
+int32_t zsrtp_protect(ZsrtpContext* ctx, pj_uint8_t* buffer, int32_t length,
                       int32_t* newLength)
 {
     CryptoContext* pcc = ctx->srtp;
@@ -147,7 +147,7 @@ int32_t zsrtp_protect(ZsrtpContext* ctx, uint8_t* buffer, int32_t length,
     return 1;
 }
 
-int32_t zsrtp_unprotect(ZsrtpContext* ctx, uint8_t* buffer, int32_t length,
+int32_t zsrtp_unprotect(ZsrtpContext* ctx, pj_uint8_t* buffer, int32_t length,
                         int32_t* newLength)
 {
     CryptoContext* pcc = ctx->srtp;
@@ -200,7 +200,7 @@ int32_t zsrtp_unprotect(ZsrtpContext* ctx, uint8_t* buffer, int32_t length,
     /* Guess the index */
     uint64_t guessedIndex = pcc->guessIndex(seqnum);
 
-    uint32_t guessedRoc = guessedIndex >> 16;
+    uint32_t guessedRoc = (uint32_t)(guessedIndex >> 16);
     uint8_t* mac = new uint8_t[pcc->getTagLength()];
 
     pcc->srtpAuthenticate(buffer, length, guessedRoc, mac);
@@ -269,7 +269,7 @@ void zsrtp_DestroyWrapperCtrl (ZsrtpContextCtrl* ctx)
     delete ctx;
 }
 
-int32_t zsrtp_protectCtrl(ZsrtpContextCtrl* ctx, uint8_t* buffer, int32_t length,
+int32_t zsrtp_protectCtrl(ZsrtpContextCtrl* ctx, pj_uint8_t* buffer, int32_t length,
                       int32_t* newLength)
 {
     CryptoContextCtrl* pcc = ctx->srtcp;
@@ -302,7 +302,7 @@ int32_t zsrtp_protectCtrl(ZsrtpContextCtrl* ctx, uint8_t* buffer, int32_t length
     return 1;
 }
 
-int32_t zsrtp_unprotectCtrl(ZsrtpContextCtrl* ctx, uint8_t* buffer, int32_t length,
+int32_t zsrtp_unprotectCtrl(ZsrtpContextCtrl* ctx, pj_uint8_t* buffer, int32_t length,
                             int32_t* newLength)
 {
     CryptoContextCtrl* pcc = ctx->srtcp;
