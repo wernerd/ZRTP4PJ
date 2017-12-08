@@ -76,6 +76,7 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
         pjmedia_dir dir,
         unsigned pct_lost);
 static pj_status_t transport_destroy(pjmedia_transport *tp);
+static pj_status_t transport_attach2(pjmedia_transport *tp, pjmedia_transport_attach_param *att_param);
 
 
 /* The transport operations */
@@ -92,7 +93,8 @@ static struct pjmedia_transport_op tp_zrtp_op =
     &transport_media_start,
     &transport_media_stop,
     &transport_simulate_lost,
-    &transport_destroy
+    &transport_destroy,
+    &transport_attach2
 };
 
 /* The transport zrtp instance */
@@ -1461,5 +1463,41 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
     if (t)
         pjmedia_transport_close(t);
 
+    return PJ_SUCCESS;
+}
+static pj_status_t transport_attach2(pjmedia_transport *tp, pjmedia_transport_attach_param *att_param){
+    struct tp_zrtp *zrtp = (struct tp_zrtp*)tp;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(tp && att_param->addr_len, PJ_EINVAL);
+
+    /* In this example, we will save the stream information and callbacks
+     * to our structure, and we will register different RTP/RTCP callbacks
+     * instead.
+     */
+    pj_assert(zrtp->stream_user_data == NULL);
+    zrtp->stream_user_data = att_param->user_data;
+    zrtp->stream_rtp_cb = att_param->rtp_cb;
+    zrtp->stream_rtcp_cb = att_param->rtcp_cb;
+
+    pjmedia_transport_attach_param param = {NULL,
+                                            PJMEDIA_TYPE_AUDIO, //Video calls later?
+                                            att_param->rem_addr,
+                                            att_param->rem_rtcp,
+                                            att_param->addr_len,
+                                            zrtp,
+                                            &transport_rtp_cb,
+                                            &transport_rtcp_cb};
+
+
+
+    status = pjmedia_transport_attach2(zrtp->slave_tp, &param);
+    if (status != PJ_SUCCESS)
+    {
+        zrtp->stream_user_data = NULL;
+        zrtp->stream_rtp_cb = NULL;
+        zrtp->stream_rtcp_cb = NULL;
+        return status;
+    }
     return PJ_SUCCESS;
 }
