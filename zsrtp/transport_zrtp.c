@@ -198,8 +198,17 @@ static pj_bool_t timer_running;
 static pj_bool_t timer_initialized = 0;
 static pj_mutex_t* timer_mutex;
 
+#ifndef DYNAMIC_TIMER
+static int pool_ref_count = 0;
+#endif
+
 static void timer_stop()
 {
+#ifndef DYNAMIC_TIMER // timer_stop is not called if defined
+    --pool_ref_count;
+    if(pool_ref_count > 0)
+        return;
+#endif
     timer_running = 0;
     pj_sem_post(timer_sem);
 
@@ -365,6 +374,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_zrtp_create(pjmedia_endpt *endpt,
     zrtp->base.op = &tp_zrtp_op;
 
 #ifndef DYNAMIC_TIMER
+    ++pool_ref_count;
     if (timer_pool == NULL)
     {
         timer_pool = pjmedia_endpt_create_pool(endpt, "zrtp_timer", 256, 256);
