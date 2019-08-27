@@ -1,9 +1,9 @@
 # Adapt this path to your pjproject path
 
-export PJDIR := ~/devhome/pjproject.git
+# export PJDIR := ~/devhome/pjproject.git
 
-include $(PJDIR)/build.mak
-include $(PJDIR)/build/common.mak
+include ../../../build.mak
+include ../../../build/common.mak
 
 export LIBDIR := ../../lib
 
