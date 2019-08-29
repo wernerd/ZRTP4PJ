@@ -2,8 +2,8 @@
 
 # export PJDIR := ~/devhome/pjproject.git
 
-include ../../../build.mak
-include ../../../build/common.mak
+include $(PJDIR)/build.mak
+include $(PJDIR)/build/common.mak
 
 export LIBDIR := ../../lib
 
@@ -126,7 +126,7 @@ $(ZSRTP_LIB):
 
 clean:
 	$(MAKE) -f $(RULES_MAK) APP=ZSRTP app=libzsrtp $@
-	rm -f $(ZSRTP_LIB)
+	rm -f $(LIBDIR)/$(ZSRTP_LIB)
 
 print_lib:
 	$(MAKE) -f $(RULES_MAK) APP=ZSRTP app=libzsrtp $@
