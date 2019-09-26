@@ -981,7 +981,11 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
     int32_t newLen = 0;
     pj_status_t rc = PJ_SUCCESS;
 
+    PJ_LOG(4, (THIS_FILE, "0: Before pj_assert"));
+
     pj_assert(zrtp && zrtp->stream_rtcp_cb && pkt);
+
+    PJ_LOG(4, (THIS_FILE, "1: After pj_assert"));
 
     // check if this could be a real RTP/SRTP packet.
     if ((*buffer & 0xf0) != 0x10)
@@ -993,6 +997,7 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
         }
         else
         {
+            PJ_LOG(4, (THIS_FILE, "2: Phase"));
             rc = zsrtp_unprotect(zrtp->srtpReceive, (pj_uint8_t*)pkt, size, &newLen);
             if (rc == 1)
             {
@@ -1006,11 +1011,13 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
                 if (zrtp->userCallback.zrtp_showMessage != NULL)
                 {
                     if (rc == -1) {
+                        PJ_LOG(4, (THIS_FILE, "3: Phase"));
                         zrtp->userCallback.zrtp_showMessage(zrtp->userCallback.userData,
                                                             zrtp_Warning, 
                                                             zrtp_WarningSRTPauthError);
                     }
                     else {
+                        PJ_LOG(4, (THIS_FILE, "4: Phase"));
                         zrtp->userCallback.zrtp_showMessage(zrtp->userCallback.userData,
                                                             zrtp_Warning,
                                                             zrtp_WarningSRTPreplayError);
@@ -1019,11 +1026,15 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
                 zrtp->unprotect_err = rc;
             }
         }
+        PJ_LOG(4, (THIS_FILE, "5: Phase"));
         if (!zrtp->started && zrtp->enableZrtp)
             pjmedia_transport_zrtp_startZrtp((pjmedia_transport *)zrtp);
 
+        PJ_LOG(4, (THIS_FILE, "6: Phase"));
         return;
     }
+
+    PJ_LOG(4, (THIS_FILE, "7: Before ZRTP processing"));
 
     // We assume all other packets are ZRTP packets here. Process
     // if ZRTP processing is enabled. Because valid RTP packets are
@@ -1038,6 +1049,8 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
         pj_uint32_t crc = *(uint32_t*)(buffer + temp);
         crc = pj_ntohl(crc);
 
+        PJ_LOG(4, (THIS_FILE, "8: Phase"));
+
         if (!zrtp_CheckCksum(buffer, temp, crc))
         {
             if (zrtp->userCallback.zrtp_showMessage != NULL)
@@ -1045,6 +1058,8 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
             return;
         }
         magic = pj_ntohl(magic);
+
+        PJ_LOG(4, (THIS_FILE, "9: Phase"));
 
         // Check if it is really a ZRTP packet, return, no further processing
         if (magic != ZRTP_MAGIC || zrtp->zrtpCtx == NULL)
@@ -1055,16 +1070,21 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
         // beginning of a session. Start ZRTP in this case as well.
         if (!zrtp->started)
         {
+            PJ_LOG(4, (THIS_FILE, "10: Phase"));
             pjmedia_transport_zrtp_startZrtp((pjmedia_transport *)zrtp);
         }
         // this now points beyond the undefined and length field.
         // We need them, thus adjust
         zrtpMsg = (buffer + 12);
 
+        PJ_LOG(4, (THIS_FILE, "11: Phase"));
+
         // store peer's SSRC in host order, used when creating the CryptoContext
         zrtp->peerSSRC = *(pj_uint32_t*)(buffer + 8);
         zrtp->peerSSRC = pj_ntohl(zrtp->peerSSRC);
         zrtp_processZrtpMessage(zrtp->zrtpCtx, zrtpMsg, zrtp->peerSSRC, size);
+
+        PJ_LOG(4, (THIS_FILE, "12: Phase"));
     }
 }
 
