@@ -995,7 +995,7 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
         if (zrtp->srtpReceive == NULL || size < 0)
         {
             PJ_LOG(4, (THIS_FILE, "1.2: Phase"));
-            PJ_LOG(4, (THIS_FILE, "stream_rtp_cb %p", zrtp->stream_rtp_cb))
+            PJ_LOG(4, (THIS_FILE, "stream_rtp_cb %p", zrtp->stream_rtp_cb));
             zrtp->stream_rtp_cb(zrtp->stream_user_data, pkt, size);
         }
         else
