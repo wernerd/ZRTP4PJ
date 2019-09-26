@@ -995,7 +995,7 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
         if (zrtp->srtpReceive == NULL || size < 0)
         {
             PJ_LOG(4, (THIS_FILE, "1.2: Phase"));
-            PJ_LOG(4, (THIS_FILE, "stream_rtp_cb %p", zrtp->stream_rtp_cb));
+            PJ_LOG(4, (THIS_FILE, "stream_rtp_cb %p", zrtp->stream_rtp_cb)); //! zrtp->stream_rtp_cb is 0x0 here
             zrtp->stream_rtp_cb(zrtp->stream_user_data, pkt, size);
         }
         else
@@ -1154,11 +1154,14 @@ static pj_status_t transport_attach(pjmedia_transport *tp,
     zrtp->stream_rtp_cb = rtp_cb;
     zrtp->stream_rtcp_cb = rtcp_cb;
 
+    PJ_LOG(4, (THIS_FILE, "Assigned within transport_attach to zrtp->stream_rtp_cb: %p", zrtp->stream_rtp_cb));
+
     status = pjmedia_transport_attach(zrtp->slave_tp, zrtp, rem_addr,
                                       rem_rtcp, addr_len, &transport_rtp_cb,
                                       &transport_rtcp_cb);
     if (status != PJ_SUCCESS)
     {
+        PJ_LOG(4, (THIS_FILE, "zrtp error: pjmedia_transport_attach() failed"));
         zrtp->stream_user_data = NULL;
         zrtp->stream_rtp_cb = NULL;
         zrtp->stream_rtcp_cb = NULL;
@@ -1513,6 +1516,8 @@ static pj_status_t transport_attach2(pjmedia_transport *tp, pjmedia_transport_at
     zrtp->stream_rtp_cb = att_param->rtp_cb;
     zrtp->stream_rtcp_cb = att_param->rtcp_cb;
 
+    PJ_LOG(4, (THIS_FILE, "Assigned within transport_attach2 to zrtp->stream_rtp_cb: %p", zrtp->stream_rtp_cb));
+
     pjmedia_transport_attach_param param = {NULL,
                                             PJMEDIA_TYPE_AUDIO, //Video calls later?
                                             att_param->rem_addr,
@@ -1527,6 +1532,7 @@ static pj_status_t transport_attach2(pjmedia_transport *tp, pjmedia_transport_at
     status = pjmedia_transport_attach2(zrtp->slave_tp, &param);
     if (status != PJ_SUCCESS)
     {
+        PJ_LOG(4, (THIS_FILE, "zrtp error: pjmedia_transport_attach2 failed"));
         zrtp->stream_user_data = NULL;
         zrtp->stream_rtp_cb = NULL;
         zrtp->stream_rtcp_cb = NULL;
