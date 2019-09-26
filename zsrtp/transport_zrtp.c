@@ -990,9 +990,12 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
     // check if this could be a real RTP/SRTP packet.
     if ((*buffer & 0xf0) != 0x10)
     {
+        PJ_LOG(4, (THIS_FILE, "1.1: Phase"));
         //  Could be real RTP, check if we are in secure mode
         if (zrtp->srtpReceive == NULL || size < 0)
         {
+            PJ_LOG(4, (THIS_FILE, "1.2: Phase"));
+            PJ_LOG(4, (THIS_FILE, "stream_rtp_cb %p", zrtp->stream_rtp_cb))
             zrtp->stream_rtp_cb(zrtp->stream_user_data, pkt, size);
         }
         else
