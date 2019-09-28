@@ -209,7 +209,7 @@ pjmedia_transport* on_create_media_transport(pjsua_call_id call_id,
      * our partners ZID, shared data etc. If the files does not exists it will
      * be created an initialized.
      */
-    pjmedia_transport_zrtp_initialize(zrtp_tp, "simple.zid", PJ_TRUE);
+    pjmedia_transport_zrtp_initialize(zrtp_tp, "/tmp/simple.zid", PJ_TRUE);
     return zrtp_tp;
 }
 
