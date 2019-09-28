@@ -108,9 +108,11 @@ struct tp_zrtp
     void (*stream_rtp_cb)(void *user_data,
                           void *pkt,
                           pj_ssize_t);
-    // TODO: We should check if rtp_cb2 is available by checking for the version with specified macros
-    // https://www.pjsip.org/pjlib/docs/html/config_8h.htm PJ_VERSION_NUM_MINOR
-    void (*stream_rtp_cb2)(pjmedia_tp_cb_param *param);
+#if defined(PJ_VERSION_NUM_MAJOR) && defined(PJ_VERSION_NUM_MINOR)
+    #if (PJ_VERSION_NUM_MAJOR >= 2) && (PJ_VERSION_NUM_MINOR >= 8)
+        void (*stream_rtp_cb2)(pjmedia_tp_cb_param *param);
+    #endif
+#endif
     void (*stream_rtcp_cb)(void *user_data,
                            void *pkt,
                            pj_ssize_t);
@@ -1094,6 +1096,8 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
     }
 }
 
+#if defined(PJ_VERSION_NUM_MAJOR) && defined(PJ_VERSION_NUM_MINOR)
+    #if (PJ_VERSION_NUM_MAJOR >= 2) && (PJ_VERSION_NUM_MINOR >= 8)
 static void transport_rtp_cb2(pjmedia_tp_cb_param *param)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)param->user_data;
@@ -1216,6 +1220,8 @@ static void transport_rtp_cb2(pjmedia_tp_cb_param *param)
         PJ_LOG(4, (THIS_FILE, "12: Phase"));
     }
 }
+    #endif
+#endif
 
 
 /* This is our RTCP callback, that is called by the slave transport when it
@@ -1313,6 +1319,11 @@ static void transport_detach(pjmedia_transport *tp, void *strm)
         pjmedia_transport_detach(zrtp->slave_tp, zrtp);
         zrtp->stream_user_data = NULL;
         zrtp->stream_rtp_cb = NULL;
+#if defined(PJ_VERSION_NUM_MAJOR) && defined(PJ_VERSION_NUM_MINOR)
+    #if (PJ_VERSION_NUM_MAJOR >= 2) && (PJ_VERSION_NUM_MINOR >= 8)
+        zrtp->stream_rtp_cb2 = NULL;
+    #endif
+#endif
         zrtp->stream_rtcp_cb = NULL;
     }
 }
@@ -1640,9 +1651,11 @@ static pj_status_t transport_attach2(pjmedia_transport *tp, pjmedia_transport_at
     pj_assert(zrtp->stream_user_data == NULL);
     zrtp->stream_user_data = att_param->user_data;
     zrtp->stream_rtp_cb = att_param->rtp_cb;
-    // TODO: We should check if rtp_cb2 is available by checking for the version with specified macros
-    // https://www.pjsip.org/pjlib/docs/html/config_8h.htm PJ_VERSION_NUM_MINOR
+#if defined(PJ_VERSION_NUM_MAJOR) && defined(PJ_VERSION_NUM_MINOR)
+    #if (PJ_VERSION_NUM_MAJOR >= 2) && (PJ_VERSION_NUM_MINOR >= 8)
     zrtp->stream_rtp_cb2 = att_param->rtp_cb2;
+    #endif
+#endif
     // zrtp->stream_rtp_cb = att_param->rtp_cb; //! att_param->rtp_cb is NULL
     zrtp->stream_rtcp_cb = att_param->rtcp_cb;
 
@@ -1656,8 +1669,13 @@ static pj_status_t transport_attach2(pjmedia_transport *tp, pjmedia_transport_at
                                             att_param->addr_len,
                                             zrtp,
                                             &transport_rtp_cb,
-                                            &transport_rtcp_cb,
-                                            &transport_rtp_cb2};
+                                            &transport_rtcp_cb
+#if defined(PJ_VERSION_NUM_MAJOR) && defined(PJ_VERSION_NUM_MINOR)
+    #if (PJ_VERSION_NUM_MAJOR >= 2) && (PJ_VERSION_NUM_MINOR >= 8)
+                                            , &transport_rtp_cb2
+    #endif
+#endif
+                                            };
 
 
 
@@ -1667,7 +1685,11 @@ static pj_status_t transport_attach2(pjmedia_transport *tp, pjmedia_transport_at
         PJ_LOG(4, (THIS_FILE, "zrtp error: pjmedia_transport_attach2 failed"));
         zrtp->stream_user_data = NULL;
         zrtp->stream_rtp_cb = NULL;
+#if defined(PJ_VERSION_NUM_MAJOR) && defined(PJ_VERSION_NUM_MINOR)
+    #if (PJ_VERSION_NUM_MAJOR >= 2) && (PJ_VERSION_NUM_MINOR >= 8)
         zrtp->stream_rtp_cb2 = NULL;
+    #endif
+#endif
         zrtp->stream_rtcp_cb = NULL;
         return status;
     }
