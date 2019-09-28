@@ -1098,7 +1098,8 @@ static void transport_rtp_cb2(pjmedia_tp_cb_param *param)
 {
     struct tp_zrtp *zrtp = (struct tp_zrtp*)param->user_data;
 
-    pj_uint8_t* buffer = (pj_uint8_t*)param->pkt;
+    void *pkt = param->pkt;
+    pj_uint8_t* buffer = (pj_uint8_t*)pkt;
     int32_t newLen = 0;
     pj_ssize_t size = param->size;
     pj_status_t rc = PJ_SUCCESS;
