@@ -8,4 +8,5 @@
 build.mak
 build/zsrtp/docs/html
 zrtp/
-
+.DS_Store
+ZRTP4J.xcodeproj/
