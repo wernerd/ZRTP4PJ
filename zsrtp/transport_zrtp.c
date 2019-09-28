@@ -1513,7 +1513,7 @@ static pj_status_t transport_attach2(pjmedia_transport *tp, pjmedia_transport_at
      */
     pj_assert(zrtp->stream_user_data == NULL);
     zrtp->stream_user_data = att_param->user_data;
-    zrtp->stream_rtp_cb = att_param->rtb_cb2;
+    zrtp->stream_rtp_cb = att_param->rtp_cb2;
     // zrtp->stream_rtp_cb = att_param->rtp_cb; //! att_param->rtp_cb is NULL
     zrtp->stream_rtcp_cb = att_param->rtcp_cb;
 
