@@ -1513,9 +1513,11 @@ static pj_status_t transport_attach2(pjmedia_transport *tp, pjmedia_transport_at
      */
     pj_assert(zrtp->stream_user_data == NULL);
     zrtp->stream_user_data = att_param->user_data;
-    zrtp->stream_rtp_cb = att_param->rtp_cb;
+    zrtp->stream_rtp_cb = att_param->rtb_cb2;
+    // zrtp->stream_rtp_cb = att_param->rtp_cb; //! att_param->rtp_cb is NULL
     zrtp->stream_rtcp_cb = att_param->rtcp_cb;
 
+    //! zrtp->stream_rtp_cb is NULL here
     PJ_LOG(4, (THIS_FILE, "Assigned within transport_attach2 to zrtp->stream_rtp_cb: %p", zrtp->stream_rtp_cb));
 
     pjmedia_transport_attach_param param = {NULL,
