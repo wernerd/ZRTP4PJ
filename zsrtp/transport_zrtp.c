@@ -108,6 +108,9 @@ struct tp_zrtp
     void (*stream_rtp_cb)(void *user_data,
                           void *pkt,
                           pj_ssize_t);
+    // TODO: We should check if rtp_cb2 is available by checking for the version with specified macros
+    // https://www.pjsip.org/pjlib/docs/html/config_8h.htm PJ_VERSION_NUM_MINOR
+    void (*stream_rtp_cb2)(pjmedia_tp_cb_param *param);
     void (*stream_rtcp_cb)(void *user_data,
                            void *pkt,
                            pj_ssize_t);
@@ -1091,6 +1094,128 @@ static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
     }
 }
 
+static void transport_rtp_cb2(pjmedia_tp_cb_param *param)
+{
+    struct tp_zrtp *zrtp = (struct tp_zrtp*)param->user_data;
+
+    pj_uint8_t* buffer = (pj_uint8_t*)param->pkt;
+    int32_t newLen = 0;
+    pj_ssize_t size = param->size;
+    pj_status_t rc = PJ_SUCCESS;
+
+    PJ_LOG(4, (THIS_FILE, "0: Before pj_assert"));
+
+    pj_assert(zrtp && zrtp->stream_rtcp_cb2 && pkt);
+
+    PJ_LOG(4, (THIS_FILE, "1: After pj_assert"));
+
+    // check if this could be a real RTP/SRTP packet.
+    if ((*buffer & 0xf0) != 0x10)
+    {
+        PJ_LOG(4, (THIS_FILE, "1.1: Phase"));
+        //  Could be real RTP, check if we are in secure mode
+        if (zrtp->srtpReceive == NULL || size < 0)
+        {
+            PJ_LOG(4, (THIS_FILE, "1.2: Phase"));
+            PJ_LOG(4, (THIS_FILE, "stream_rtp_cb2 %p", zrtp->stream_rtp_cb2)); //! zrtp->stream_rtp_cb is 0x0 here
+            struct pjmedia_tp_cb_param tp = { zrtp->stream_user_data, pkt, size, NULL, PJ_FALSE };
+            zrtp->stream_rtp_cb2(&tp);
+        }
+        else
+        {
+            PJ_LOG(4, (THIS_FILE, "2: Phase"));
+            rc = zsrtp_unprotect(zrtp->srtpReceive, (pj_uint8_t*)pkt, size, &newLen);
+            if (rc == 1)
+            {
+                zrtp->unprotect++;
+                struct pjmedia_tp_cb_param tp = { zrtp->stream_user_data, pkt, newLen, NULL, PJ_FALSE };
+                zrtp->stream_rtp_cb2(&tp);
+                // zrtp->stream_rtp_cb2(zrtp->stream_user_data, pkt,
+                //                     newLen);
+                zrtp->unprotect_err = 0;
+            }
+            else
+            {
+                if (zrtp->userCallback.zrtp_showMessage != NULL)
+                {
+                    if (rc == -1) {
+                        PJ_LOG(4, (THIS_FILE, "3: Phase"));
+                        zrtp->userCallback.zrtp_showMessage(zrtp->userCallback.userData,
+                                                            zrtp_Warning, 
+                                                            zrtp_WarningSRTPauthError);
+                    }
+                    else {
+                        PJ_LOG(4, (THIS_FILE, "4: Phase"));
+                        zrtp->userCallback.zrtp_showMessage(zrtp->userCallback.userData,
+                                                            zrtp_Warning,
+                                                            zrtp_WarningSRTPreplayError);
+                    }
+                }
+                zrtp->unprotect_err = rc;
+            }
+        }
+        PJ_LOG(4, (THIS_FILE, "5: Phase"));
+        if (!zrtp->started && zrtp->enableZrtp)
+            pjmedia_transport_zrtp_startZrtp((pjmedia_transport *)zrtp);
+
+        PJ_LOG(4, (THIS_FILE, "6: Phase"));
+        return;
+    }
+
+    PJ_LOG(4, (THIS_FILE, "7: Before ZRTP processing"));
+
+    // We assume all other packets are ZRTP packets here. Process
+    // if ZRTP processing is enabled. Because valid RTP packets are
+    // already handled we delete any packets here after processing.
+    if (zrtp->enableZrtp && zrtp->zrtpCtx != NULL)
+    {
+        unsigned char* zrtpMsg = NULL;
+        pj_uint32_t magic = *(pj_uint32_t*)(buffer + 4);
+
+        // Get CRC value into crc (see above how to compute the offset)
+        pj_uint16_t temp = (pj_uint16_t)(size - CRC_SIZE);
+        pj_uint32_t crc = *(uint32_t*)(buffer + temp);
+        crc = pj_ntohl(crc);
+
+        PJ_LOG(4, (THIS_FILE, "8: Phase"));
+
+        if (!zrtp_CheckCksum(buffer, temp, crc))
+        {
+            if (zrtp->userCallback.zrtp_showMessage != NULL)
+                zrtp->userCallback.zrtp_showMessage(zrtp->userCallback.userData, zrtp_Warning, zrtp_WarningCRCmismatch);
+            return;
+        }
+        magic = pj_ntohl(magic);
+
+        PJ_LOG(4, (THIS_FILE, "9: Phase"));
+
+        // Check if it is really a ZRTP packet, return, no further processing
+        if (magic != ZRTP_MAGIC || zrtp->zrtpCtx == NULL)
+        {
+            return;
+        }
+        // cover the case if the other party sends _only_ ZRTP packets at the
+        // beginning of a session. Start ZRTP in this case as well.
+        if (!zrtp->started)
+        {
+            PJ_LOG(4, (THIS_FILE, "10: Phase"));
+            pjmedia_transport_zrtp_startZrtp((pjmedia_transport *)zrtp);
+        }
+        // this now points beyond the undefined and length field.
+        // We need them, thus adjust
+        zrtpMsg = (buffer + 12);
+
+        PJ_LOG(4, (THIS_FILE, "11: Phase"));
+
+        // store peer's SSRC in host order, used when creating the CryptoContext
+        zrtp->peerSSRC = *(pj_uint32_t*)(buffer + 8);
+        zrtp->peerSSRC = pj_ntohl(zrtp->peerSSRC);
+        zrtp_processZrtpMessage(zrtp->zrtpCtx, zrtpMsg, zrtp->peerSSRC, size);
+
+        PJ_LOG(4, (THIS_FILE, "12: Phase"));
+    }
+}
+
 
 /* This is our RTCP callback, that is called by the slave transport when it
  * receives RTCP packet.
@@ -1513,12 +1638,15 @@ static pj_status_t transport_attach2(pjmedia_transport *tp, pjmedia_transport_at
      */
     pj_assert(zrtp->stream_user_data == NULL);
     zrtp->stream_user_data = att_param->user_data;
-    zrtp->stream_rtp_cb = att_param->rtp_cb2;
+    zrtp->stream_rtp_cb = att_param->rtp_cb;
+    // TODO: We should check if rtp_cb2 is available by checking for the version with specified macros
+    // https://www.pjsip.org/pjlib/docs/html/config_8h.htm PJ_VERSION_NUM_MINOR
+    zrtp->stream_rtp_cb2 = att_param->rtp_cb2;
     // zrtp->stream_rtp_cb = att_param->rtp_cb; //! att_param->rtp_cb is NULL
     zrtp->stream_rtcp_cb = att_param->rtcp_cb;
 
     //! zrtp->stream_rtp_cb is NULL here
-    PJ_LOG(4, (THIS_FILE, "Assigned within transport_attach2 to zrtp->stream_rtp_cb: %p", zrtp->stream_rtp_cb));
+    PJ_LOG(4, (THIS_FILE, "Assigned within transport_attach2 to zrtp->stream_rtp_cb2: %p", zrtp->stream_rtp_cb2));
 
     pjmedia_transport_attach_param param = {NULL,
                                             PJMEDIA_TYPE_AUDIO, //Video calls later?
@@ -1527,7 +1655,8 @@ static pj_status_t transport_attach2(pjmedia_transport *tp, pjmedia_transport_at
                                             att_param->addr_len,
                                             zrtp,
                                             &transport_rtp_cb,
-                                            &transport_rtcp_cb};
+                                            &transport_rtcp_cb,
+                                            &transport_rtp_cb2};
 
 
 
@@ -1537,6 +1666,7 @@ static pj_status_t transport_attach2(pjmedia_transport *tp, pjmedia_transport_at
         PJ_LOG(4, (THIS_FILE, "zrtp error: pjmedia_transport_attach2 failed"));
         zrtp->stream_user_data = NULL;
         zrtp->stream_rtp_cb = NULL;
+        zrtp->stream_rtp_cb2 = NULL;
         zrtp->stream_rtcp_cb = NULL;
         return status;
     }
