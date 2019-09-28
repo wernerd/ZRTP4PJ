@@ -1105,7 +1105,7 @@ static void transport_rtp_cb2(pjmedia_tp_cb_param *param)
 
     PJ_LOG(4, (THIS_FILE, "0: Before pj_assert"));
 
-    pj_assert(zrtp && zrtp->stream_rtcp_cb2 && pkt);
+    pj_assert(zrtp && zrtp->stream_rtcp_cb && pkt);
 
     PJ_LOG(4, (THIS_FILE, "1: After pj_assert"));
 
